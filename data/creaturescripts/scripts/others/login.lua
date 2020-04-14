@@ -40,7 +40,8 @@ function onLogin(player)
 
     local playerId = player:getId()
 
-	DailyReward.init(playerId)
+    --daily reward
+    player:initDailyRewardSystem()
 
     player:loadSpecialStorage()
 
@@ -60,20 +61,6 @@ function onLogin(player)
 
     -- EXP Stamina
     nextUseXpStamina[playerId] = 1
-
-	-- Prey Small Window
-	if player:getClient().version > 1110 then
-		for slot = CONST_PREY_SLOT_FIRST, CONST_PREY_SLOT_THIRD do
-			player:sendPreyData(slot)
-		end
-	end	 
-
-    -- New Prey
-    nextPreyTime[playerId] = {
-        [CONST_PREY_SLOT_FIRST] = 1,
-        [CONST_PREY_SLOT_SECOND] = 1,
-        [CONST_PREY_SLOT_THIRD] = 1
-    }
 
     if (player:getAccountType() == ACCOUNT_TYPE_TUTOR) then
         local msg = [[:: Tutor Rules
@@ -123,33 +110,20 @@ function onLogin(player)
 	end
 
 	-- Set Client XP Gain Rate
+	local baseExp = 100
 	if Game.getStorageValue(GlobalStorage.XpDisplayMode) > 0 then
-		displayRate = Game.getExperienceStage(player:getLevel())
-		else
-		displayRate = 1
+		baseExp = Game.getExperienceStage(player:getLevel())
 	end
 	local staminaMinutes = player:getStamina()
-	local storeBoost = player:getExpBoostStamina()
-	player:setStoreXpBoost(storeBoost > 0 and 50 or 0)
-	if staminaMinutes > 2400 and player:isPremium() and storeBoost > 0 then
-		player:setBaseXpGain(displayRate*2*100) -- Premium + Stamina boost + Store boost
-		player:setStaminaXpBoost(150)
-	elseif staminaMinutes > 2400 and player:isPremium() and storeBoost <= 0 then
-		player:setBaseXpGain(displayRate*1.5*100) -- Premium + Stamina boost
-		player:setStaminaXpBoost(150)
-	elseif staminaMinutes <= 2400 and staminaMinutes > 840 and player:isPremium() and storeBoost > 0 then
-		player:setBaseXpGain(displayRate*1.5*100) -- Premium + Store boost
-		player:setStaminaXpBoost(100)
-	elseif staminaMinutes > 840 and storeBoost > 0 then
-		player:setBaseXpGain(displayRate*1.5*100) -- FACC + Store boost
-		player:setStaminaXpBoost(100)
-	elseif staminaMinutes <= 840 and storeBoost > 0 then
-		player:setBaseXpGain(displayRate*1*100) -- ALL players low stamina + Store boost
-		player:setStaminaXpBoost(50)
-	elseif staminaMinutes <= 840 then
-		player:setBaseXpGain(displayRate*0.5*100) -- ALL players low stamina
-		player:setStaminaXpBoost(50)
+	local doubleExp = false -- pode mudar pra true se tiver double no server
+	local staminaBonus = (staminaMinutes > 2400) and 150 or ((staminaMinutes < 840) and 50 or 100)
+
+	if doubleExp then
+		baseExp = baseExp * 2
 	end
+
+	player:setStaminaXpBoost(staminaBonus)
+	player:setBaseXpGain(baseExp)
 
 	if player:getClient().version > 1110 then
 		local worldTime = getWorldTime()

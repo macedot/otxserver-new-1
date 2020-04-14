@@ -2,7 +2,7 @@
  * @file otserv.cpp
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 #include "configmanager.h"
 #include "scriptmanager.h"
 #include "rsa.h"
+#include "prey.h"
 #include "protocolold.h"
 #include "protocollogin.h"
 #include "protocolstatus.h"
@@ -49,6 +50,7 @@ Monsters g_monsters;
 Vocations g_vocations;
 extern Scripts* g_scripts;
 RSA g_RSA;
+Prey g_prey;
 
 std::mutex g_loaderLock;
 std::condition_variable g_loaderSignal;
@@ -130,9 +132,7 @@ void mainLoader(int argc, char* argv[], ServiceManager* services)
 	std::cout << std::endl;
 
 	std::cout << "Special Credits for: " << STATUS_SERVER_CREDITS << "." << std::endl;
-	std::cout << "Visit our forum for updates, support, and resources: http://www.otland.net/" << std::endl;
-	std::cout << "Link of repository: https://github.com/malucooo/OTXServer-New/" << std::endl;
-	std::cout << "List of contributors: https://github.com/malucooo/OTXServer-New/graphs/contributors" << std::endl;
+	std::cout << "Link of repository: https://github.com/malucooo/otxserver-new/" << std::endl;
 	std::cout << std::endl;
 
 	// TODO: dirty for now; Use stdarg;
@@ -232,6 +232,12 @@ void mainLoader(int argc, char* argv[], ServiceManager* services)
 	std::cout << ">> Loading outfits" << std::endl;
 	if (!Outfits::getInstance().loadFromXml()) {
 		startupErrorMessage("Unable to load outfits!");
+		return;
+	}
+
+	std::cout << ">> Loading prey data" << std::endl;
+	if (!g_prey.loadFromXml()) {
+		startupErrorMessage("Unable to load prey data!");
 		return;
 	}
 

@@ -2,7 +2,7 @@
  * @file items.h
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -226,6 +226,7 @@ class ItemType
 		int32_t runeMagLevel = 0;
 		int32_t runeLevel = 0;
 		int32_t wrapableTo = 0;
+		uint16_t unmoveabledItem = 0;
 
 		CombatType_t combatType = COMBAT_NONE;
 
@@ -243,6 +244,7 @@ class ItemType
 
 		MagicEffectClasses magicEffect = CONST_ME_NONE;
 		Direction bedPartnerDir = DIRECTION_NONE;
+		QuickLootCategory_t quickLootCategory = LOOT_NONE;
 		WeaponType_t weaponType = WEAPON_NONE;
 		Ammo_t ammoType = AMMO_NONE;
 		ShootType_t shootType = CONST_ANI_NONE;

@@ -46,15 +46,16 @@ function onLogin(player)
 	"BossesKill",
 	"TheShattererKill",
 	"BossesHero",
-	"DragonsKill",
+	"Kill Dragon",
+	"Somewhat Beatable Death",
 	"deeplingBosses",
 	"theGreatDragonHuntKill",
-	"bonusPreyLootKill",
 	"bossesMissionCults",
 	"bragrumol_kill",
 	"mozradek_kill",
 	"xogixath_kill",
-	"CultoFafnar"
+	"CultoFafnar",
+	"BestiaryOnKill"
 }
 	
 	for i = 1, #events do

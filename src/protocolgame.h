@@ -2,7 +2,7 @@
  * @file protocolgame.h
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -110,6 +110,9 @@ class ProtocolGame final : public Protocol
 		void parseAttack(NetworkMessage& msg);
 		void parseFollow(NetworkMessage& msg);
 
+		void parseCyclopediaCharacterInfo(NetworkMessage& msg);
+		void parseTournamentLeaderboard(NetworkMessage& msg);
+
 		void parseBugReport(NetworkMessage& msg);
 		void parseDebugAssert(NetworkMessage& msg);
 		void parseRuleViolationReport(NetworkMessage &msg);
@@ -180,6 +183,10 @@ class ProtocolGame final : public Protocol
 		void parseStoreBuyOffer(NetworkMessage &message);
 		void parseCoinTransfer(NetworkMessage &msg);
 
+		//Prey system
+		void parseRequestResourceData(NetworkMessage& msg);
+		void parsePreyAction(NetworkMessage& msg);
+
 		// imbue info
 		void addImbuementInfo(NetworkMessage &msg, uint32_t imbuid);
 
@@ -194,9 +201,11 @@ class ProtocolGame final : public Protocol
 		void sendToChannel(const Creature* creature, SpeakClasses type, const std::string& text, uint16_t channelId);
 		void sendPrivateMessage(const Player* speaker, SpeakClasses type, const std::string& text);
 		void sendIcons(uint16_t icons);
+		void sendRestingAreaIcon(bool activate=false, bool activeResting=false);
 		void sendFYIBox(const std::string& message);
 
 		void sendImbuementWindow(Item* item);
+		void sendItemsPrice();
 
 		void sendDistanceShoot(const Position& from, const Position& to, uint8_t type);
 		void sendMagicEffect(const Position& pos, uint8_t type);
@@ -210,21 +219,38 @@ class ProtocolGame final : public Protocol
 		// Unjust Panel
 		void sendUnjustifiedPoints(const uint8_t& dayProgress, const uint8_t& dayLeft, const uint8_t& weekProgress, const uint8_t& weekLeft, const uint8_t& monthProgress, const uint8_t& monthLeft, const uint8_t& skullDuration);
 
-		// Send preyInfo
-		void sendPreyData();
-
 		void sendCancelWalk();
 		void sendChangeSpeed(const Creature* creature, uint32_t speed);
 		void sendCancelTarget();
 		void sendCreatureOutfit(const Creature* creature, const Outfit_t& outfit);
 		void sendStats();
 		void sendBasicData();
+		void sendPreyData(uint8_t preySlotId);
+		void sendRerollPrice(uint32_t price);
+		void sendFreeListRerollAvailability(uint8_t preySlotId, uint16_t time);
+		void sendPreyTimeLeft(uint8_t preySlotId, uint16_t timeLeft);
+		void sendMessageDialog(MessageDialog_t type, const std::string& message);
 		void sendStoreHighlight();
 		void sendTextMessage(const TextMessage& message);
 		void sendReLoginWindow(uint8_t unfairFightReduction);
 
 		void sendTutorial(uint8_t tutorialId);
 		void sendAddMarker(const Position& pos, uint8_t markType, const std::string& desc);
+
+		void sendTournamentLeaderboard();
+
+		void sendCyclopediaCharacterBaseInformation();
+		void sendCyclopediaCharacterGeneralStats();
+		void sendCyclopediaCharacterCombatStats();
+		void sendCyclopediaCharacterRecentDeaths();
+		void sendCyclopediaCharacterRecentPvPKills();
+		void sendCyclopediaCharacterAchievements();
+		void sendCyclopediaCharacterItemSummary();
+		void sendCyclopediaCharacterOutfitsMounts();
+		void sendCyclopediaCharacterStoreSummary();
+		void sendCyclopediaCharacterInspection();
+		void sendCyclopediaCharacterBadges();
+		void sendCyclopediaCharacterTitles();
 
 		void sendCreatureWalkthrough(const Creature* creature, bool walkthrough);
 		void sendCreatureShield(const Creature* creature);
@@ -258,13 +284,11 @@ class ProtocolGame final : public Protocol
 		void sendUpdatedVIPStatus(uint32_t guid, VipStatus_t newStatus);
 		void sendVIP(uint32_t guid, const std::string& name, const std::string& description, uint32_t icon, bool notify, VipStatus_t status);
 
-		void sendPendingStateEntered();
-		void sendEnterWorld();
-
 		void sendFightModes();
 
 		void sendCreatureLight(const Creature* creature);
 		void sendWorldLight(const LightInfo& lightInfo);
+		void sendTibiaTime(int32_t time);
 
 		void sendCreatureSquare(const Creature* creature, SquareColor_t color);
 
@@ -288,6 +312,7 @@ class ProtocolGame final : public Protocol
 		void sendAddTileItem(const Position& pos, uint32_t stackpos, const Item* item);
 		void sendUpdateTileItem(const Position& pos, uint32_t stackpos, const Item* item);
 		void sendRemoveTileThing(const Position& pos, uint32_t stackpos);
+		void sendRemoveTileCreature(const Creature* creature, const Position& pos, uint32_t stackpos);
 		void sendUpdateTile(const Tile* tile, const Position& pos);
 
 		void sendAddCreature(const Creature* creature, const Position& pos, int32_t stackpos, bool isLogin);
@@ -315,6 +340,9 @@ class ProtocolGame final : public Protocol
  		void sendUpdateImpactTracker(int32_t quantity, bool isHeal);
  		void sendUpdateLootTracker(Item* item);
 
+		//Prey System
+		void sendResourceData(ResourceType_t resourceType, int64_t amount);
+
 		//Help functions
 
 		// translate a tile to clientreadable format
@@ -330,7 +358,7 @@ class ProtocolGame final : public Protocol
 
 		void AddCreature(NetworkMessage& msg, const Creature* creature, bool known, uint32_t remove);
 		void AddPlayerStats(NetworkMessage& msg);
-		void AddOutfit(NetworkMessage& msg, const Outfit_t& outfit);
+		void AddOutfit(NetworkMessage& msg, const Outfit_t& outfit, bool addMount = true);
 		void AddPlayerSkills(NetworkMessage& msg);
 		void sendBlessStatus();
 		void sendPremiumTrigger();
@@ -339,6 +367,7 @@ class ProtocolGame final : public Protocol
 
 		//tiles
 		static void RemoveTileThing(NetworkMessage& msg, const Position& pos, uint32_t stackpos);
+		static void RemoveTileCreature(NetworkMessage& msg, const Creature* creature, const Position& pos, uint32_t stackpos);
 
 		void MoveUpCreature(NetworkMessage& msg, const Creature* creature, const Position& newPos, const Position& oldPos);
 		void MoveDownCreature(NetworkMessage& msg, const Creature* creature, const Position& newPos, const Position& oldPos);

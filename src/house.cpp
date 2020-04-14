@@ -2,7 +2,7 @@
  * @file house.cpp
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -234,7 +234,8 @@ bool House::transferToDepot(Player* player) const
 				if (item->isWrapable()) {
 					std::string itemName = item->getName();
 					uint16_t itemID = item->getID();
-					Item* newItem = g_game.transformItem(item, 26054);
+					uint16_t newWrapId = Item::items[item->getID()].wrapableTo;
+					Item* newItem = g_game.transformItem(item, newWrapId);
 					newItem->setIntAttr(ITEM_ATTRIBUTE_ACTIONID, itemID);
 					std::ostringstream ss;
 					ss << "Unwrap it in your own house to create a <" << itemName << ">.";

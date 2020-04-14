@@ -277,7 +277,7 @@ Storage = {
 		Reward03 = 35052,
 	},
 	FirstDragon = {
-		Start = 10195,
+		Questline = 10195,
 		DragonCounter = 10196,
 		ChestCounter = 10197,
 		TazhadurTimer = 10198,
@@ -285,13 +285,20 @@ Storage = {
 		SecretsCounter = 10200,
 		GelidrazahAccess = 10221,
 		GelidrazahTimer = 10222,
-		ZorvoraxTimer = 10223,
-		Horn = 10224,
-		Scale = 10225,
-		Bones = 10226,
-		Tooth = 10227,
-		AccessCave = 10228,
-		FirstDragonTimer = 10229
+		DesertTile = 10223,
+		StoneSculptureTile = 10224,
+		SuntowerTile = 10225,
+		ZorvoraxTimer = 10226,
+		Horn = 10227,
+		Scale = 10228,
+		Bones = 10229,
+		Tooth = 10230,
+		AccessCave = 10231,
+		SomewhatBeatable = 10232,
+		FirstDragonTimer = 10233,
+		RewardFeather = 10234,
+		RewardMask = 10235,
+		RewardBackpack = 10236
 	},
 	Grimvale = {
 		SilverVein = 10094
@@ -552,6 +559,9 @@ Storage = {
 		Mission11 = 9951,
 		Mission12 = 9952,
 		Mission13 = 9953,
+		Mission14a = 3080,
+		Mission14b = 3081,
+		Mission14c = 3082,
 		Mission14 = 9954,
 		Mission15 = 9955,
 		Mission16 = 9956,
@@ -562,7 +572,11 @@ Storage = {
 		Mission21 = 9961,
 		Mission22 = 9962,
 		Mission23 = 9963,
-		Mission24 = 9964,
+		Mission24a = 9964,
+		Mission24b = 9877,
+		Mission24c = 9878,
+		Mission24d = 9879,
+		Mission24e = 9880,
 		Mission25 = 9965,
 		Mission26 = 9966,
 		Mission27 = 9967,
@@ -1013,6 +1027,29 @@ Storage = {
 		Reward = 12513,
 		TheatreScript = 12514
 	},
+	ShadownofYalahar = {
+		QuestStart = 95591,
+		Cerdras = 91592,
+		Dreadeye = 91593,
+		Boveas = 91594,
+		Scutty = 91595,
+		Milos = 91596,
+		GolemParts = 91334,
+		Questline = 95592,
+		-- doors
+		doorFactory = 35593,
+		doorCharge = 35592,
+		doorOut06 = 35595,
+		doorPower07 = 35597,
+		doorStable08 = 35599,
+		doorRitual09 = 35704,
+		doorShower11 = 35705,
+		doorLast13 = 35608,
+		doorLastLaboratorio13 =	35610,
+		doorCathedral = 35615,
+		doorThorn = 35616,
+		doorFibula = 35617
+	},
 	CaptainHaba = 12540,
 	secretService = {
 		Quest = 12550,
@@ -1182,9 +1219,9 @@ Storage = {
 		TrophyWarlord = 1107,
 
 		-- Actions Reward Doors
-		Greenhorn = 26100,
-		Scrapper = 27100,
-		Warlord = 28100
+		Greenhorn = 26101,
+		Scrapper = 27101,
+		Warlord = 28101
 	},
 	QuestChests = {
 		-- Todo: Move to a seperate range
@@ -1208,6 +1245,8 @@ Storage = {
 
 		KosheiAmulet1 = 3062,
 		KosheiAmulet2 = 3064,
+		
+		Panpipe = 4055,
 
 		SilverBrooch = 9185,
 		FamilyBrooch = 2286,
@@ -1437,8 +1476,15 @@ Storage = {
 	Factions = 50723,
 	blockMovementStorage = 100000,
 	PetSummon = 60045,
-	isTraining = 37
+	isTraining = 37,
 
+	dailyReward = {
+        nextRewardPick = DAILYREWARDSTORAGE_NEXTREWARDPICK,
+        lastRewardPick = DAILYREWARDSTORAGE_LASTREWARDPICK,
+        streakDays = DAILYREWARDSTORAGE_STREAKDAYS,
+        exhaust = 69802,
+        currentIndex = 69803
+    }
 }
 
 GlobalStorage = {
@@ -1561,9 +1607,11 @@ GlobalStorage = {
 		DiprathSwitchesGlobalStorage = 201,
 		AshmunrahSwitchesGlobalStorage = 202
 	},
+	Darkcathedral = 64436,
 	NaginataStone = 50058,
 	ExpBoost = 51052,
 	SwordOfFury = 5635,
-	XpDisplayMode = 5634
+	XpDisplayMode = 5634,
+	LastServerSave =  69798
 
 }

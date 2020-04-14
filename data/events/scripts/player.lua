@@ -7,7 +7,7 @@ DISABLE_CONTAINER_WEIGHT = 0 -- 0 = ENABLE CONTAINER WEIGHT CHECK | 1 = DISABLE 
 CONTAINER_WEIGHT = 1000000 -- 1000000 = 10k = 10000.00 oz | this function is only for containers, item below the weight determined here can be moved inside the container, for others items look game.cpp at the src
 
 -- Items sold on the store that should not be moved off the store container
-local storeItemID = {32384,32385,32386,32387,32388,32389,32124,32125,32126,32127,32128,32129,32109,33299,26378,29020}
+local storeItemID = {32384,32385,32386,32387,32388,32389,32124,32125,32126,32127,32128,32129,32109,33299,26378,29020,32109}
 
 -- No move/trade items with actionID 8000
 BLOCK_ITEM_WITH_ACTION = 8000
@@ -152,6 +152,18 @@ function Player:onLook(thing, position, distance)
 			local uniqueId = thing:getAttribute(ITEM_ATTRIBUTE_UNIQUEID)
 			if uniqueId > 0 and uniqueId < 65536 then
 				description = string.format("%s, Unique ID: %d", description, uniqueId)
+			end
+
+			if thing:isContainer() then
+				local quickLootCategories = {}
+				local container = Container(thing.uid)
+				for categoryId = LOOT_START, LOOT_END do
+					if container:hasQuickLootCategory(categoryId) then
+						table.insert(quickLootCategories, categoryId)
+					end
+				end
+
+				description = string.format("%s, QuickLootCategory: (%s)", description, table.concat(quickLootCategories, ", "))
 			end
 
 			local itemType = thing:getType()
@@ -463,6 +475,15 @@ function Player:onMoveItem(item, count, fromPosition, toPosition, fromCylinder, 
 
 	-- Check two-handed weapons
 	if toPosition.x ~= CONTAINER_POSITION then
+		if item:isContainer() then
+			local container = Container(item.uid)
+			for categoryId = LOOT_START, LOOT_END do
+				if container:hasQuickLootCategory(categoryId) then
+					container:removeQuickLootCategory(categoryId)
+					self:setQuickLootBackpack(categoryId, nil)
+				end
+			end
+		end
 		return true
 	end
 
@@ -719,33 +740,24 @@ function Player:onGainExperience(source, exp, rawExp)
 	end
 
 	-- Experience Stage Multiplier
-	exp = exp * Game.getExperienceStage(self:getLevel())
-	baseExp = rawExp * Game.getExperienceStage(self:getLevel())
+	local expStage = Game.getExperienceStage(self:getLevel())
+	exp = exp * expStage
+	baseExp = rawExp * expStage
 	if Game.getStorageValue(GlobalStorage.XpDisplayMode) > 0 then
-		displayRate = Game.getExperienceStage(self:getLevel())
+		displayRate = expStage
 		else
 		displayRate = 1
 	end
 
-	-- Prey Bonus
-	for slot = CONST_PREY_SLOT_FIRST, CONST_PREY_SLOT_THIRD do
-		if (self:getPreyCurrentMonster(slot) == source:getName() and self:getPreyBonusType(slot) == CONST_BONUS_XP_BONUS) then
-			exp = exp + math.floor(exp * (self:getPreyBonusValue(slot) / 100))
-			preyTimeLeft(self, slot) -- slot consumption
-			break
-		end
-	end
-
 	-- Store Bonus
-	local Boost = self:getExpBoostStamina()
 	useStaminaXp(self) -- Use store boost stamina
-	self:setStoreXpBoost(Boost > 0 and 50 or 0)
-	if (self:getExpBoostStamina() <= 0 and self:getStoreXpBoost() > 0) then
-		self:setStoreXpBoost(0) -- Reset Store boost to 0 if boost stamina has ran out
-	end
-	if (self:getStoreXpBoost() > 0) then
-		exp = exp + (baseExp * (self:getStoreXpBoost()/100)) -- Exp Boost
-		displayRate = displayRate * ((self:getStoreXpBoost()+100)/100)
+	local Boost = self:getExpBoostStamina()
+	local stillHasBoost = Boost > 0
+	local storeXpBoostAmount = stillHasBoost and self:getStoreXpBoost() or 0
+	self:setStoreXpBoost(storeXpBoostAmount) 
+
+	if (storeXpBoostAmount > 0) then
+		exp = exp + (baseExp * (storeXpBoostAmount/100)) -- Exp Boost
 	end
 
 	-- Stamina Bonus
@@ -753,20 +765,13 @@ function Player:onGainExperience(source, exp, rawExp)
 		useStamina(self)
 		local staminaMinutes = self:getStamina()
 		if staminaMinutes > 2400 and self:isPremium() then
-			exp = exp + baseExp * 0.5
-			displayRate = displayRate + Game.getExperienceStage(self:getLevel()) * 0.5
+			exp = exp * 1.5
 			self:setStaminaXpBoost(150)
 		elseif staminaMinutes <= 840 then
-			exp = exp * 0.5
+			exp = exp * 0.5 --TODO destroy loot of people with 840- stamina
 			self:setStaminaXpBoost(50)
-			displayRate = displayRate * 0.5
 		else
 			self:setStaminaXpBoost(100)
-		end
-		for slot = CONST_PREY_SLOT_FIRST, CONST_PREY_SLOT_THIRD do
-			if self:getPreyState(slot) == 2 then
-			 preyTimeLeft(self, slot) -- slot consumption
-			end
 		end
 	end
 
@@ -936,16 +941,14 @@ function Player:onCombat(target, item, primaryDamage, primaryType, secondaryDama
 		for i = 0, slots - 1 do
 			local imbuement = item:getImbuement(i)
 			if imbuement then
-				local percent = imbuement:getElementDamage()
+				local percent = imbuement:getElementDamage() 
+				local totalDmg = primaryDamage --store it for damage adjustment
 				if percent and percent > 0 then
 					if primaryDamage ~= 0 then
-						secondaryDamage = primaryDamage*math.min(percent/100, 1)
+						local factor = percent / 100
 						secondaryType = imbuement:getCombatType()
-						primaryDamage = primaryDamage - primaryDamage*math.min(percent/100, 1)
-					elseif secondaryDamage ~= 0 then
-						primaryDamage = secondaryDamage*math.min(percent/100, 1)
-						primaryType = imbuement:getCombatType()
-						secondaryDamage = secondaryDamage - secondaryDamage*math.min(percent/100, 1)
+						primaryDamage = totalDmg * (1 - factor)
+						secondaryDamage = totalDmg * (factor)
 					end
 				end
 			end

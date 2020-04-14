@@ -2,7 +2,7 @@
  * @file container.cpp
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ Container::Container(Tile* tile) : Container(ITEM_BROWSEFIELD, 30, false, true)
 	TileItemVector* itemVector = tile->getItemList();
 	if (itemVector) {
 		for (Item* item : *itemVector) {
-			if ((item->getContainer() || item->hasProperty(CONST_PROP_MOVEABLE)) && !item->hasAttribute(ITEM_ATTRIBUTE_ACTIONID)) {
+			if (((item->getContainer() || item->hasProperty(CONST_PROP_MOVEABLE)) || (item->isWrapable() && !item->hasProperty(CONST_PROP_MOVEABLE) && !item->hasProperty(CONST_PROP_BLOCKPATH))) && !item->hasAttribute(ITEM_ATTRIBUTE_UNIQUEID)) {
 				itemlist.push_front(item);
 				item->setParent(this);
 			}
@@ -205,6 +205,32 @@ std::ostringstream& Container::getContentDescription(std::ostringstream& os) con
 		}
 
 		os << item->getNameDescription();
+	}
+
+	if (firstitem) {
+		os << "nothing";
+	}
+	return os;
+}
+
+std::ostringstream& Container::getContentDescriptionColor(std::ostringstream& os) const
+{
+	bool firstitem = true;
+	for (ContainerIterator it = iterator(); it.hasNext(); it.advance()) {
+		Item* item = *it;
+
+		Container* container = item->getContainer();
+		if (container && !container->empty()) {
+			continue;
+		}
+
+		if (firstitem) {
+			firstitem = false;
+		} else {
+			os << ", ";
+		}
+
+	os << '{' << item->getClientID() << '|' << item->getNameDescription() << '}';
 	}
 
 	if (firstitem) {

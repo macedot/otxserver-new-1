@@ -2,7 +2,7 @@
  * @file game.cpp
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,7 +123,10 @@ void Game::setGameState(GameState_t newState)
 	switch (newState) {
 		case GAME_STATE_INIT: {
 			loadExperienceStages();
+			loadSkillStages();
+			loadMagicLevelStages();
 
+			loadItemsPrice();
 			groups.load();
 			g_chat->load();
 
@@ -209,6 +212,34 @@ void Game::saveGameState()
 	if (gameState == GAME_STATE_MAINTAIN) {
 		setGameState(GAME_STATE_NORMAL);
 	}
+}
+
+bool Game::loadItemsPrice()
+{
+	itemsSaleCount = 0;
+	std::ostringstream query, query2;
+	query << "SELECT DISTINCT `itemtype` FROM `market_offers`;";
+
+	Database& db = Database::getInstance();	
+	DBResult_ptr result = db.storeQuery(query.str());
+	if (!result) {
+		return false;
+	}
+
+	do {
+		query2.str(std::string());
+		uint16_t itemId = result->getNumber<uint16_t>("itemtype");
+		query2 << "SELECT `price` FROM `market_offers` WHERE `itemtype` = " << itemId << " ORDER BY `price` DESC LIMIT 1";
+		DBResult_ptr resultQuery2 = db.storeQuery(query2.str());
+		if (resultQuery2) {
+			itemsPriceMap[itemId] = resultQuery2->getNumber<uint32_t>("price");
+			itemsSaleCount++;
+		}
+
+	} while (result->next());
+
+
+	return true;
 }
 
 bool Game::loadMainMap(const std::string& filename)
@@ -552,10 +583,14 @@ bool Game::internalPlaceCreature(Creature* creature, const Position& pos, bool e
 	return true;
 }
 
-bool Game::placeCreature(Creature* creature, const Position& pos, bool extendedPos /*=false*/, bool forced /*= false*/)
+bool Game::placeCreature(Creature* creature, const Position& pos, bool extendedPos /*=false*/, bool forced /*= false*/, Creature* master)
 {
 	if (!internalPlaceCreature(creature, pos, extendedPos, forced)) {
 		return false;
+	}
+
+	if (master) {
+		creature->setMaster(master);
 	}
 
 	SpectatorHashSet spectators;
@@ -1056,7 +1091,14 @@ void Game::playerMoveItem(Player* player, const Position& fromPos,
 			toIndex = static_cast<uint8_t>(toPos.y);
 		}
 	}
-
+	if (item->isWrapable()){
+		HouseTile* toHouseTile = dynamic_cast<HouseTile*>(map.getTile(mapToPos));
+		HouseTile* fromHouseTile = dynamic_cast<HouseTile*>(map.getTile(mapFromPos));
+		if (fromHouseTile && (!toHouseTile || toHouseTile->getHouse()->getId() != fromHouseTile->getHouse()->getId())) {
+			player->sendCancelMessage("You can't move this item outside a house.");
+				return;
+		}
+	}
 	ReturnValue ret = internalMoveItem(fromCylinder, toCylinder, toIndex, item, count, nullptr, 0, player);
 	if (ret != RETURNVALUE_NOERROR) {
 		player->sendCancelMessage(ret);
@@ -1474,7 +1516,7 @@ Item* Game::findItemOfType(Cylinder* cylinder, uint16_t itemId,
 	return nullptr;
 }
 
-bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*/)
+bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*/, bool useBalance /*= false*/)
 {
 	if (cylinder == nullptr) {
 		return false;
@@ -1529,8 +1571,14 @@ bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*
 		}
 	}
 
-	if (moneyCount < money) {
-        return false;
+	Player* player = useBalance ? dynamic_cast<Player*>(cylinder) : nullptr;
+	uint64_t balance = 0;
+	if (useBalance && player) {
+		balance = player->getBankBalance();
+	}
+
+	if (moneyCount + balance < money) {
+		return false;
     }
 
 	for (const auto& moneyEntry : moneyMap) {
@@ -1551,6 +1599,10 @@ bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*
 		}
 	}
 	moneyMap.clear();
+
+	if (useBalance && player && player->getBankBalance() >= money) {
+		player->setBankBalance(player->getBankBalance() - money);
+	}
 
 	return true;
 }
@@ -2347,7 +2399,7 @@ void Game::playerMoveUpContainer(uint32_t playerId, uint8_t cid)
 
 void Game::playerUpdateContainer(uint32_t playerId, uint8_t cid)
 {
-	Player* player = getPlayerByID(playerId);
+	Player* player = getPlayerByGUID(playerId);
 	if (!player) {
 		return;
 	}
@@ -2399,6 +2451,7 @@ void Game::playerRotateItem(uint32_t playerId, const Position& pos, uint8_t stac
 	}
 }
 
+
 void Game::playerWrapableItem(uint32_t playerId, const Position& pos, uint8_t stackPos, const uint16_t spriteId)
 {
 	Player* player = getPlayerByID(playerId);
@@ -2419,12 +2472,18 @@ void Game::playerWrapableItem(uint32_t playerId, const Position& pos, uint8_t st
 
 	Item* item = thing->getItem();
 	Tile* tile = map.getTile(item->getPosition());
-	if (!tile->hasFlag(TILESTATE_PROTECTIONZONE)) {
+	HouseTile* houseTile = dynamic_cast<HouseTile*>(tile);
+	if (!tile->hasFlag(TILESTATE_PROTECTIONZONE) || !houseTile) {
 		player->sendCancelMessage("You may construct this only inside a house.");
 		return;
 	}
 
-	if (!item || item->getClientID() != spriteId || item->hasAttribute(ITEM_ATTRIBUTE_UNIQUEID) || item->isWrapable()) {
+	if (houseTile->getHouse() != house) {
+		player->sendCancelMessage("Only owners can wrap/unwrap inside a house.");
+			return;
+	}
+
+	if (!item || item->getClientID() != spriteId || item->hasAttribute(ITEM_ATTRIBUTE_UNIQUEID)) {
 		player->sendCancelMessage(RETURNVALUE_NOTPOSSIBLE);
 		return;
 	}
@@ -2446,18 +2505,24 @@ void Game::playerWrapableItem(uint32_t playerId, const Position& pos, uint8_t st
 
 	const ItemType& iiType = Item::items[item->getID()];
 	uint16_t newWrapId = Item::items[item->getID()].wrapableTo;
+
+	if ((item->getHoldingPlayer() && item->getID() == newWrapId) || (tile->hasFlag(TILESTATE_IMMOVABLEBLOCKSOLID) && !item->hasProperty(CONST_PROP_IMMOVABLEBLOCKSOLID))) {
+		player->sendCancelMessage("You can only wrap/unwrap in the floor.");
+		return;
+	}
+
 	std::string itemName = item->getName();
 
 	// It is not possible to unwrap containers with one or more items inside.
 	const Container* container = item->getContainer();
-	if(container && container->getItemHoldingCount() > 0){
+	if (container && container->getItemHoldingCount() > 0) {
 		player->sendCancelMessage(RETURNVALUE_NOTPOSSIBLE);
 		return;
 	}
 
 	// FOR ITEMS THAT DO NOT LOSE ACTIONID TO TRANSFORM
 	if (!iiType.wrapContainer) {
-		if (newWrapId != 0 && item->getID() != TRANSFORM_BOX_ID) {
+		if (newWrapId != 0) {
 			uint16_t hiddenCharges = 0;
 			if (isCaskItem(item->getID())) {
 				hiddenCharges = item->getSubType();
@@ -2472,7 +2537,7 @@ void Game::playerWrapableItem(uint32_t playerId, const Position& pos, uint8_t st
 			startDecay(item);
 		}
 
-		if ((item->getActionId() != 0) && !newWrapId && item->getID() == TRANSFORM_BOX_ID) {
+		if ((item->getActionId() != 0) && !newWrapId) {
 			uint16_t hiddenCharges = item->getDate();
 			uint16_t boxActionId = item->getActionId();
 			transformItem(item, item->getActionId()); // transforms the item
@@ -2487,14 +2552,14 @@ void Game::playerWrapableItem(uint32_t playerId, const Position& pos, uint8_t st
 		// FOR ITEMS LOSING ACTIONID TO TRANSFORM
 		if (iiType.wrapContainer) {
 			Item* wrapContainer = transformItem(item, newWrapId);
-			if (newWrapId != 0 && item->getID() != TRANSFORM_BOX_ID) {
+			if (newWrapId != 0) {
 				wrapContainer->setActionId(item->getID()); // Then you have to make a box adc if you have aid
 				wrapContainer->setSpecialDescription("Unwrap it in your own house to create a <" + itemName + ">.");
 				addMagicEffect(wrapContainer->getPosition(), CONST_ME_POFF);
 				startDecay(item);
 			}
 
-			if ((item->getActionId() != 0) && !newWrapId && item->getID() == TRANSFORM_BOX_ID) {
+			if ((item->getActionId() != 0) && !newWrapId) {
 				uint16_t hiddenCharges = item->getDate();
 				uint16_t boxActionId = item->getActionId();
 				transformItem(item, item->getActionId())->setSpecialDescription("Wrap it in your own house to create a <" + itemName + ">.");
@@ -2680,7 +2745,7 @@ void Game::playerRequestTrade(uint32_t playerId, const Position& pos, uint8_t st
 		return;
 	}
 
-	if (player->hasCondition(CONDITION_EXHAUST, 1)) {
+	if (player->hasCondition(CONDITION_EXHAUST, 8)) {
 		player->sendTextMessage(MESSAGE_STATUS_SMALL, "You can't trade very fast.");
 		return;
 	}
@@ -3186,7 +3251,7 @@ void Game::playerLookAt(uint32_t playerId, const Position& pos, uint8_t stackPos
 		return;
 	}
 
-	if (player->hasCondition(CONDITION_EXHAUST, 1)) {
+	if (player->hasCondition(CONDITION_EXHAUST, 7)) {
 		player->sendTextMessage(MESSAGE_STATUS_SMALL, "You can't look very fast.");
 		return;
 	}
@@ -3233,7 +3298,7 @@ void Game::playerLookInBattleList(uint32_t playerId, uint32_t creatureId)
 		return;
 	}
 
-	if (player->hasCondition(CONDITION_EXHAUST, 1)) {
+	if (player->hasCondition(CONDITION_EXHAUST, 7)) {
 		player->sendTextMessage(MESSAGE_STATUS_SMALL, "You can't look very fast.");
 		return;
 	}
@@ -3504,7 +3569,7 @@ void Game::playerChangeOutfit(uint32_t playerId, Outfit_t outfit)
 		return;
 	}
 
-	if (player->hasCondition(CONDITION_EXHAUST, 1)) {
+	if (player->hasCondition(CONDITION_EXHAUST, 7)) {
 		player->sendTextMessage(MESSAGE_STATUS_SMALL, "You can't change outfit very fast.");
 		return;
 	}
@@ -3743,7 +3808,7 @@ void Game::playerSpeakToNpc(Player* player, const std::string& text)
 {
 	SpectatorHashSet spectators;
 	map.getSpectators(spectators, player->getPosition());
-	if (player->hasCondition(CONDITION_EXHAUST, 1)) {
+	if (player->hasCondition(CONDITION_EXHAUST, 2)) {
 		player->sendTextMessage(MESSAGE_STATUS_SMALL, "You can't speak very fast.");
 		return;
 	}
@@ -4132,6 +4197,7 @@ void Game::combatGetTypeInfo(CombatType_t combatType, Creature* target, TextColo
 
 bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage& damage, bool isEvent)
 {
+	using namespace std;
 	const Position& targetPos = target->getPosition();
 	if (damage.primary.value > 0) {
 		if (target->getHealth() <= 0) {
@@ -4317,6 +4383,9 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 							ss << " due to your own attack.";
 						} else {
 							ss << " due to an attack by " << attacker->getNameDescription() << '.';
+							if (tmpPlayer->hasActivePreyBonus(BONUS_DAMAGE_REDUCTION, attacker)) {
+								ss << " (active prey bonus)";
+							}
 						}
 						message.type = MESSAGE_DAMAGE_RECEIVED;
 						message.text = ss.str();
@@ -4341,6 +4410,7 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 					tmpPlayer->sendTextMessage(message);
 				}
 
+				applyImbuementEffects(attackerPlayer, damage, manaDamage);
 				damage.primary.value -= manaDamage;
 				if (damage.primary.value < 0) {
 					damage.secondary.value = std::max<int32_t>(0, damage.secondary.value + damage.primary.value);
@@ -4399,14 +4469,14 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 		}
 
 		// Using real damage
-		if (attackerPlayer && damage.origin != ORIGIN_NONE) {
+		if (attackerPlayer) {
 			//life leech
 			if (normal_random(0, 100) < attackerPlayer->getSkillLevel(SKILL_LIFE_LEECH_CHANCE)) {
 				CombatParams tmpParams;
 				CombatDamage tmpDamage;
 				tmpDamage.origin = ORIGIN_SPELL;
 				tmpDamage.primary.type = COMBAT_HEALING;
-				tmpDamage.primary.value = std::round((realDamage * (attackerPlayer->getSkillLevel(SKILL_LIFE_LEECH_AMOUNT) /100.)) / damage.affected);
+				tmpDamage.primary.value = std::round((realDamage * (0.9 + (damage.affected / 10.)) * (attackerPlayer->getSkillLevel(SKILL_LIFE_LEECH_AMOUNT) /100.)) / damage.affected);
 
 				Combat::doCombatHealth(nullptr, attackerPlayer, tmpDamage, tmpParams);
 			}
@@ -4417,7 +4487,7 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 				CombatDamage tmpDamage;
 				tmpDamage.origin = ORIGIN_SPELL;
 				tmpDamage.primary.type = COMBAT_MANADRAIN;
-				tmpDamage.primary.value = std::round((realDamage * (attackerPlayer->getSkillLevel(SKILL_MANA_LEECH_AMOUNT) /100.)) / damage.affected);
+				tmpDamage.primary.value = std::round((realDamage * (0.9 + (damage.affected / 10.)) * (attackerPlayer->getSkillLevel(SKILL_MANA_LEECH_AMOUNT) /100.)) / damage.affected);
 
 				Combat::doCombatMana(nullptr, attackerPlayer, tmpDamage, tmpParams);
 			}
@@ -4464,6 +4534,9 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 				if (tmpPlayer == attackerPlayer && attackerPlayer != targetPlayer) {
 					ss.str({});
 					ss << ucfirst(target->getNameDescription()) << " loses " << damageString << " due to your attack.";
+					if (tmpPlayer->hasActivePreyBonus(BONUS_DAMAGE_BOOST, target)) {
+						ss << " (active prey bonus)";
+					}
 					message.type = MESSAGE_DAMAGE_DEALT;
 					message.text = ss.str();
 				} else if (tmpPlayer == targetPlayer) {
@@ -4475,6 +4548,9 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 						ss << " due to your own attack.";
 					} else {
 						ss << " due to an attack by " << attacker->getNameDescription() << '.';
+						if (tmpPlayer->hasActivePreyBonus(BONUS_DAMAGE_REDUCTION, attacker)) {
+							ss << " (active prey bonus)";
+						}
 					}
 					message.type = MESSAGE_DAMAGE_RECEIVED;
 					message.text = ss.str();
@@ -4661,6 +4737,9 @@ bool Game::combatChangeMana(Creature* attacker, Creature* target, CombatDamage& 
 					ss << " due to your own attack.";
 				} else {
 					ss << " mana due to an attack by " << attacker->getNameDescription() << '.';
+					if (tmpPlayer->hasActivePreyBonus(BONUS_DAMAGE_REDUCTION, attacker)) {
+						ss << " (active prey bonus)";
+					}
 				}
 				message.type = MESSAGE_DAMAGE_RECEIVED;
 				message.text = ss.str();
@@ -4891,6 +4970,9 @@ void Game::checkImbuements()
 			player->postRemoveNotification(item, player, index);
 			ReleaseItem(item);
 			it = imbuedItems[bucket].erase(it);
+			for (uint8_t slot = 0; slot < slots; slot++) {
+				item->setImbuement(slot, 0);
+			}
 		}
 
 		for (uint8_t slot = 0; slot < slots; slot++) {
@@ -4901,7 +4983,7 @@ void Game::checkImbuements()
 
 			int32_t id = info & 0xFF;
 			int64_t newinfo = (duration << 8) | id;
-			item->setImbuement(slot,newinfo);
+			item->setImbuement(slot, newinfo);
 		}
 
 		if (needUpdate) {
@@ -4913,6 +4995,34 @@ void Game::checkImbuements()
 
 	lastImbuedBucket = bucket;
 	cleanup();
+}
+
+void Game::applyImbuementEffects(Creature * attacker, CombatDamage & damage, int32_t realDamage)
+{
+	Player *attackerPlayer = (Player *)attacker;
+	if (attackerPlayer) {
+		if (normal_random(0, 100) < attackerPlayer->getSkillLevel(SKILL_LIFE_LEECH_CHANCE)) {
+			CombatParams tmpParams;
+			CombatDamage tmpDamage;
+			tmpDamage.origin = ORIGIN_SPELL;
+			tmpDamage.primary.type = COMBAT_HEALING;
+			tmpDamage.primary.value = std::round((realDamage * (0.9 + (damage.affected / 10.)) * (attackerPlayer->getSkillLevel(SKILL_LIFE_LEECH_AMOUNT) / 100.)) / damage.affected);
+
+			Combat::doCombatHealth(nullptr, attackerPlayer, tmpDamage, tmpParams);
+		}
+
+		//mana leech
+		if (normal_random(0, 100) < attackerPlayer->getSkillLevel(SKILL_MANA_LEECH_CHANCE)) {
+			CombatParams tmpParams;
+			CombatDamage tmpDamage;
+			tmpDamage.origin = ORIGIN_SPELL;
+			tmpDamage.primary.type = COMBAT_MANADRAIN;
+			tmpDamage.primary.value = std::round((realDamage * (0.9 + (damage.affected / 10.)) * (attackerPlayer->getSkillLevel(SKILL_MANA_LEECH_AMOUNT) / 100.)) / damage.affected);
+
+			Combat::doCombatMana(nullptr, attackerPlayer, tmpDamage, tmpParams);
+		}
+	}
+
 }
 
 void Game::checkLight()
@@ -4964,6 +5074,11 @@ void Game::checkLight()
 
 		for (const auto& it : players) {
 			it.second->sendWorldLight(lightInfo);
+			it.second->sendTibiaTime(lightHour);
+		}
+	} else {
+		for (const auto& it : players) {
+			it.second->sendTibiaTime(lightHour);
 		}
 	}
 }
@@ -5224,7 +5339,7 @@ void Game::loadPlayersRecord()
 	}
 }
 
-uint64_t Game::getExperienceStage(uint32_t level)
+double Game::getExperienceStage(uint32_t level)
 {
 	if (!stagesEnabled) {
 		return g_config.getNumber(ConfigManager::RATE_EXPERIENCE);
@@ -5250,7 +5365,8 @@ bool Game::loadExperienceStages()
 		if (strcasecmp(stageNode.name(), "config") == 0) {
 			stagesEnabled = stageNode.attribute("enabled").as_bool();
 		} else {
-			uint32_t minLevel, maxLevel, multiplier;
+			uint32_t minLevel, maxLevel;
+			double multiplier;
 
 			pugi::xml_attribute minLevelAttribute = stageNode.attribute("minlevel");
 			if (minLevelAttribute) {
@@ -5270,7 +5386,7 @@ bool Game::loadExperienceStages()
 
 			pugi::xml_attribute multiplierAttribute = stageNode.attribute("multiplier");
 			if (multiplierAttribute) {
-				multiplier = pugi::cast<uint32_t>(multiplierAttribute.value());
+				multiplier = pugi::cast<double>(multiplierAttribute.value());
 			} else {
 				multiplier = 1;
 			}
@@ -5285,6 +5401,143 @@ bool Game::loadExperienceStages()
 		}
 	}
 	return true;
+}
+
+bool Game::loadSkillStages()
+{
+	pugi::xml_document doc;
+	pugi::xml_parse_result result = doc.load_file("data/XML/skillstages.xml");
+	if (!result) {
+		printXMLError("Error - Game::loadSkillStages", "data/XML/skillstages.xml", result);
+		return false;
+	}
+
+	for (auto stageNode : doc.child("skillstages").children()) {
+		if (strcasecmp(stageNode.name(), "skills") == 0) {
+			stagesSkillEnabled = stageNode.attribute("enabled").as_bool();
+			for (auto stage1 : stageNode.children()) {
+				uint32_t minLevel, maxLevel, multiplier;
+
+				pugi::xml_attribute minLevelAttribute = stage1.attribute("minskill");
+				if (minLevelAttribute) {
+					minLevel = pugi::cast<uint32_t>(minLevelAttribute.value());
+				}
+				else {
+					minLevel = 1;
+				}
+
+				pugi::xml_attribute maxLevelAttribute = stage1.attribute("maxskill");
+				if (maxLevelAttribute) {
+					maxLevel = pugi::cast<uint32_t>(maxLevelAttribute.value());
+				}
+				else {
+					maxLevel = 0;
+					lastStageSkill = minLevel;
+					useLastStageSkill = true;
+				}
+
+				pugi::xml_attribute multiplierAttribute = stage1.attribute("multiplier");
+				if (multiplierAttribute) {
+					multiplier = pugi::cast<uint32_t>(multiplierAttribute.value());
+				}
+				else {
+					multiplier = 1;
+				}
+
+				if (useLastStageSkill) {
+					stagesSkill[lastStageSkill] = multiplier;
+				}
+				else {
+					for (uint32_t i = minLevel; i <= maxLevel; ++i) {
+						stagesSkill[i] = multiplier;
+					}
+				}
+			}
+		}
+	}
+	return true;
+}
+
+uint64_t Game::getSkillStage(uint32_t level)
+{
+	if (!stagesSkillEnabled) {
+		return g_config.getNumber(ConfigManager::RATE_SKILL);
+	}
+
+	if (useLastStageSkill && level >= lastStageSkill) {
+		return stagesSkill[lastStageSkill];
+	}
+
+	return stagesSkill[level];
+}
+
+
+bool Game::loadMagicLevelStages()
+{
+	pugi::xml_document doc;
+	pugi::xml_parse_result result = doc.load_file("data/XML/skillstages.xml");
+	if (!result) {
+		printXMLError("Error - Game::loadMagicLevelStages", "data/XML/skillstages.xml", result);
+		return false;
+	}
+
+	for (auto stageNode : doc.child("skillstages").children()) {
+		if (strcasecmp(stageNode.name(), "magiclevel") == 0) {
+			stagesMlEnabled = stageNode.attribute("enabled").as_bool();
+			for (auto stage1 : stageNode.children()) {
+				uint32_t minLevel, maxLevel, multiplier;
+
+				pugi::xml_attribute minLevelAttribute = stage1.attribute("minmagic");
+				if (minLevelAttribute) {
+					minLevel = pugi::cast<uint32_t>(minLevelAttribute.value());
+				}
+				else {
+					minLevel = 1;
+				}
+
+				pugi::xml_attribute maxLevelAttribute = stage1.attribute("maxmagic");
+				if (maxLevelAttribute) {
+					maxLevel = pugi::cast<uint32_t>(maxLevelAttribute.value());
+				}
+				else {
+					maxLevel = 0;
+					lastStageMl = minLevel;
+					useLastStageMl = true;
+				}
+
+				pugi::xml_attribute multiplierAttribute = stage1.attribute("multiplier");
+				if (multiplierAttribute) {
+					multiplier = pugi::cast<uint32_t>(multiplierAttribute.value());
+				}
+				else {
+					multiplier = 1;
+				}
+
+				if (useLastStageMl) {
+					stagesMl[lastStageMl] = multiplier;
+				}
+				else {
+					for (uint32_t i = minLevel; i <= maxLevel; ++i) {
+						stagesMl[i] = multiplier;
+					}
+				}
+			}
+		}
+	}
+	return true;
+}
+
+uint64_t Game::getMagicLevelStage(uint32_t level)
+{
+	if (!stagesMlEnabled) {
+		return g_config.getNumber(ConfigManager::RATE_MAGIC);
+	}
+
+	if (useLastStageMl && level >= lastStageMl) {
+		return stagesMl[lastStageMl];
+	}
+
+	return stagesMl[level];
 }
 
 void Game::playerInviteToParty(uint32_t playerId, uint32_t invitedId)
@@ -5438,6 +5691,39 @@ void Game::kickPlayer(uint32_t playerId, bool displayEffect)
 	}
 
 	player->kickPlayer(displayEffect);
+}
+
+void Game::playerCyclopediaCharacterInfo(uint32_t playerId, CyclopediaCharacterInfoType_t characterInfoType)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	switch (characterInfoType) {
+	case CYCLOPEDIA_CHARACTERINFO_BASEINFORMATION: player->sendCyclopediaCharacterBaseInformation(); break;
+	case CYCLOPEDIA_CHARACTERINFO_GENERALSTATS: player->sendCyclopediaCharacterGeneralStats(); break;
+	case CYCLOPEDIA_CHARACTERINFO_COMBATSTATS: player->sendCyclopediaCharacterCombatStats(); break;
+	case CYCLOPEDIA_CHARACTERINFO_RECENTDEATHS: player->sendCyclopediaCharacterRecentDeaths(); break;
+	case CYCLOPEDIA_CHARACTERINFO_RECENTPVPKILLS: player->sendCyclopediaCharacterRecentPvPKills(); break;
+	case CYCLOPEDIA_CHARACTERINFO_ACHIEVEMENTS: player->sendCyclopediaCharacterAchievements(); break;
+	case CYCLOPEDIA_CHARACTERINFO_ITEMSUMMARY: player->sendCyclopediaCharacterItemSummary(); break;
+	case CYCLOPEDIA_CHARACTERINFO_OUTFITSMOUNTS: player->sendCyclopediaCharacterOutfitsMounts(); break;
+	case CYCLOPEDIA_CHARACTERINFO_STORESUMMARY: player->sendCyclopediaCharacterStoreSummary(); break;
+	case CYCLOPEDIA_CHARACTERINFO_INSPECTION: player->sendCyclopediaCharacterInspection(); break;
+	case CYCLOPEDIA_CHARACTERINFO_BADGES: player->sendCyclopediaCharacterBadges(); break;
+	case CYCLOPEDIA_CHARACTERINFO_TITLES: player->sendCyclopediaCharacterTitles(); break;
+	}
+}
+
+void Game::playerTournamentLeaderboard(uint32_t playerId, uint8_t leaderboardType)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player || leaderboardType > 1) {
+		return;
+	}
+
+	player->sendTournamentLeaderboard();
 }
 
 void Game::playerReportRuleViolationReport(uint32_t playerId, const std::string& targetName, uint8_t reportType, uint8_t reportReason, const std::string& comment, const std::string& translation)
@@ -5683,6 +5969,14 @@ void Game::playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t spr
 	}
 
 	IOMarket::createOffer(player->getGUID(), static_cast<MarketAction_t>(type), it.id, amount, price, anonymous);
+
+	auto ColorItem = itemsPriceMap.find(it.id);
+	if (ColorItem == itemsPriceMap.end()) {
+		itemsPriceMap[it.id] = price;
+		itemsSaleCount++;
+	} else if (ColorItem->second < price) {
+		itemsPriceMap[it.id] = price;
+	}
 
 	player->sendMarketEnter(player->getLastDepotId());
 	const MarketOfferList& buyOffers = IOMarket::getActiveOffers(MARKETACTION_BUY, it.id);
@@ -6406,6 +6700,56 @@ void Game::parsePlayerExtendedOpcode(uint32_t playerId, uint8_t opcode, const st
 
 	for (CreatureEvent* creatureEvent : player->getCreatureEvents(CREATURE_EVENT_EXTENDED_OPCODE)) {
 		creatureEvent->executeExtendedOpcode(player, opcode, buffer);
+	}
+}
+
+void Game::playerRequestResourceData(uint32_t playerId, ResourceType_t resourceType) {
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	for (uint8_t preySlotId = 0; preySlotId < PREY_SLOTCOUNT; preySlotId++) {
+		player->sendFreeListRerollAvailability(preySlotId);
+	}
+
+	switch (resourceType) {
+	case RESOURCETYPE_BANK_GOLD: player->sendResourceData(RESOURCETYPE_BANK_GOLD, player->getBankBalance()); break;
+	case RESOURCETYPE_INVENTORY_GOLD: player->sendResourceData(RESOURCETYPE_INVENTORY_GOLD, player->getMoney()); break;
+	case RESOURCETYPE_PREY_BONUS_REROLLS: player->sendResourceData(RESOURCETYPE_PREY_BONUS_REROLLS, 0); break;
+	default: {
+		player->sendResourceData(RESOURCETYPE_BANK_GOLD, player->getBankBalance());
+		player->sendResourceData(RESOURCETYPE_INVENTORY_GOLD, player->getMoney());
+		player->sendResourceData(RESOURCETYPE_PREY_BONUS_REROLLS, player->getBonusRerollCount());
+		break;
+	}
+	}
+}
+
+void Game::playerPreyAction(uint32_t playerId, uint8_t preySlotId, PreyAction_t preyAction, uint8_t monsterIndex)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	ReturnValue returnValue = RETURNVALUE_NOERROR;
+	switch (preyAction) {
+	case PREY_ACTION_LISTREROLL:
+		returnValue = player->rerollPreyData(preySlotId);
+		break;
+	case PREY_ACTION_BONUSREROLL:
+		returnValue = player->rerollPreyBonus(preySlotId);
+		break;
+	case PREY_ACTION_MONSTERSELECTION:
+		returnValue = player->changePreyDataState(preySlotId, STATE_ACTIVE, monsterIndex);
+		break;
+	default:
+		break;
+	}
+
+	if (returnValue != RETURNVALUE_NOERROR) {
+		player->sendMessageDialog(MESSAGEDIALOG_PREY_ERROR, getReturnMessage(returnValue));
 	}
 }
 

@@ -2,7 +2,7 @@
  * @file tile.h
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -141,8 +141,11 @@ class TileItemVector : private ItemVector
 			}
 			return *getBeginDownItem();
 		}
-		void addDownItemCount(int32_t increment) {
-			downItemCount += increment;
+		void increaseDownItemCount() {
+			downItemCount += 1;
+		}
+		void decreaseDownItemCount() {
+			downItemCount -= 1;
 		}
 
 	private:

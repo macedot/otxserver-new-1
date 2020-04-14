@@ -2,7 +2,7 @@
  * @file game.h
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -208,7 +208,7 @@ class Game
 		  * \param extendedPos If true, the creature will in first-hand be placed 2 tiles away
 		  * \param force If true, placing the creature will not fail because of obstacles (creatures/items)
 		  */
-		bool placeCreature(Creature* creature, const Position& pos, bool extendedPos = false, bool force = false);
+		bool placeCreature(Creature* creature, const Position& pos, bool extendedPos = false, bool force = false, Creature* master = nullptr);
 
 		/**
 		  * Remove Creature from the map.
@@ -231,6 +231,10 @@ class Game
 		}
 		uint32_t getPlayersRecord() const {
 			return playersRecord;
+		}
+
+		uint16_t getItemsPriceCount() const {
+			return itemsSaleCount;
 		}
 
 		LightInfo getWorldLightInfo() const;
@@ -270,7 +274,7 @@ class Game
 		  * \param flags optional flags to modifiy the default behaviour
 		  * \returns true if the removal was successful
 		  */
-		bool removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags = 0);
+		bool removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags = 0, bool useBank = false);
 
 		/**
 		  * Add item(s) with monetary value
@@ -324,6 +328,9 @@ class Game
 		void playerDebugAssert(uint32_t playerId, const std::string& assertLine, const std::string& date, const std::string& description, const std::string& comment);
 		void playerAnswerModalWindow(uint32_t playerId, uint32_t modalWindowId, uint8_t button, uint8_t choice);
 		void playerReportRuleViolationReport(uint32_t playerId, const std::string& targetName, uint8_t reportType, uint8_t reportReason, const std::string& comment, const std::string& translation);
+
+		void playerCyclopediaCharacterInfo(uint32_t playerId, CyclopediaCharacterInfoType_t characterInfoType);
+		void playerTournamentLeaderboard(uint32_t playerId, uint8_t leaderboardType);
 
 		bool internalStartTrade(Player* player, Player* partner, Item* tradeItem);
 		void internalCloseTrade(Player* player);
@@ -409,6 +416,8 @@ class Game
 		void playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t spriteId, uint16_t amount, uint32_t price, bool anonymous);
 		void playerCancelMarketOffer(uint32_t playerId, uint32_t timestamp, uint16_t counter);
 		void playerAcceptMarketOffer(uint32_t playerId, uint32_t timestamp, uint16_t counter, uint16_t amount);
+		void playerRequestResourceData(uint32_t playerId, ResourceType_t resourceType);
+		void playerPreyAction(uint32_t playerId, uint8_t preySlotId, PreyAction_t preyAction, uint8_t monsterIndex);
 		void playerStoreOpen(uint32_t playerId, uint8_t serviceType);
 		void playerShowStoreCategoryOffers(uint32_t playerId, StoreCategory* category);
 		void playerBuyStoreOffer(uint32_t playerId, uint32_t offerId, uint8_t productType, const std::string& additionalInfo="");
@@ -477,7 +486,15 @@ class Game
 		}
 
 		bool loadExperienceStages();
-		uint64_t getExperienceStage(uint32_t level);
+		double getExperienceStage(uint32_t level);
+
+		bool loadSkillStages();
+		uint64_t getSkillStage(uint32_t level);
+
+		bool loadMagicLevelStages();
+		uint64_t getMagicLevelStage(uint32_t level);
+
+		bool loadItemsPrice();
 
 		void loadMotdNum();
 		void saveMotdNum() const;
@@ -487,6 +504,7 @@ class Game
 
 		void sendOfflineTrainingDialog(Player* player);
 
+		const std::map<uint16_t, uint32_t>& getItemsPrice() const { return itemsPriceMap; }
 		const std::unordered_map<uint32_t, Player*>& getPlayers() const { return players; }
 		const std::map<uint32_t, Npc*>& getNpcs() const { return npcs; }
 
@@ -534,6 +552,7 @@ class Game
 	protected:
 		void checkImbuements();
 
+		void applyImbuementEffects(Creature* attacker, CombatDamage& damage, int32_t realDamage);
 		bool playerSaySpell(Player* player, SpeakClasses type, const std::string& text);
 		void playerWhisper(Player* player, const std::string& text);
 		bool playerYell(Player* player, const std::string& text);
@@ -547,7 +566,9 @@ class Game
 		std::unordered_map<std::string, Player*> mappedPlayerNames;
 		std::unordered_map<uint32_t, Guild*> guilds;
 		std::unordered_map<uint16_t, Item*> uniqueItems;
-		std::map<uint32_t, uint32_t> stages;
+		std::map<uint32_t, double> stages;
+		std::map<uint32_t, uint32_t> stagesSkill;
+		std::map<uint32_t, uint32_t> stagesMl;
 
 		std::list<Item*> decayItems[EVENT_DECAY_BUCKETS];
 		std::list<Creature*> checkCreatureLists[EVENT_CREATURECOUNT];
@@ -596,9 +617,18 @@ class Game
 		std::string motdHash;
 		uint32_t motdNum = 0;
 
+		std::map<uint16_t, uint32_t> itemsPriceMap;
+		uint16_t itemsSaleCount;
+
 		uint32_t lastStageLevel = 0;
 		bool stagesEnabled = false;
 		bool useLastStageLevel = false;
+		uint32_t lastStageSkill = 0;
+		bool stagesSkillEnabled = false;
+		bool useLastStageSkill = false;
+		uint32_t lastStageMl = 0;
+		bool stagesMlEnabled = false;
+		bool useLastStageMl = false;
 };
 
 #endif

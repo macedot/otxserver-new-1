@@ -2,7 +2,7 @@
  * @file container.h
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -179,6 +179,7 @@ class Container : public Item, public Cylinder
 
 	protected:
 		std::ostringstream& getContentDescription(std::ostringstream& os) const;
+		std::ostringstream& getContentDescriptionColor(std::ostringstream& os) const;
 
 		uint32_t maxSize;
 		uint32_t totalWeight = 0;

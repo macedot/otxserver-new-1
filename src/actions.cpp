@@ -2,7 +2,7 @@
  * @file actions.cpp
  * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -553,18 +553,18 @@ bool useImbueShrine(Player* player, Item*, const Position&, Thing* target, const
 {
 	Item* item = target ? target->getItem() : nullptr;
 	if (!item) {
-		player->sendTextMessage(MESSAGE_EVENT_ADVANCE, "This item is not imbuable.");
+		player->sendTextMessage(MESSAGE_STATUS_SMALL, "This item is not imbuable.");
 		return false;
 	}
 
 	const ItemType& it = Item::items[item->getID()];
 	if(it.imbuingSlots <= 0 ) {
-		player->sendTextMessage(MESSAGE_EVENT_ADVANCE, "This item is not imbuable.");
+		player->sendTextMessage(MESSAGE_STATUS_SMALL, "This item is not imbuable.");
 		return false;		
 	}
 
 	if (item->getTopParent() != player) {
-		player->sendTextMessage(MESSAGE_EVENT_ADVANCE, "You have to pick up the item to imbue it.");
+		player->sendTextMessage(MESSAGE_STATUS_SMALL, "You cannot imbue an equipped item.");
 		return false;
 	}
 	
