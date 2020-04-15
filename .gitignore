@@ -8,7 +8,6 @@
 /data/world/realmap.otbm
 #binary
 tfs
-config.lua
 libmariadb.dll
 lua51.dll
 lzma.dll
