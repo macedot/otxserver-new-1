@@ -1544,19 +1544,19 @@
 	<monster name="Whirling Blades" file="Dream Courts/whirling blades.xml"/>
 
 	<!-- Monstros adicionados recentemente -->
-	<monster name="Acolyte of Darkness" file="new/Acolyte_of_Darkness.xml"/>
-	<monster name="An Observer Eye" file="new/An_Observer_Eye.xml"/>
-	<monster name="Angry Demon" file="new/Angry_Demon.xml"/>
-	<monster name="Bane of Light" file="new/Bane_of_Light.xml"/>
-	<monster name="Burrowing Beetle" file="new/Burrowing_Beetle.xml"/>
-	<monster name="Cave Spider" file="new/Cave_Spider.xml"/>
-	<monster name="Dawn Bat" file="new/Dawn_Bat.xml"/>
-	<monster name="Dreadmaw" file="new/Dreadmaw.xml"/>
-	<monster name="Duskbringer" file="new/Duskbringer.xml"/>
-	<monster name="Eclipse Knight" file="new/Eclipse_Knight.xml"/>
-	<monster name="Essence of Darkness" file="new/Essence_of_Darkness.xml"/>
-	<monster name="Fahim the Wise" file="new/Fahim_the_Wise.xml"/>
-	<monster name="Flame of Omrafir" file="new/Flame_of_Omrafir.xml"/>
-	<monster name="Fleabringer" file="new/Fleabringer.xml"/>
-	<monster name="Frost Servant" file="new/Frost_Servant.xml"/>
+	<monster name="Acolyte of Darkness" file="News/Acolyte_of_Darkness.xml"/>
+	<monster name="An Observer Eye" file="News/An_Observer_Eye.xml"/>
+	<monster name="Angry Demon" file="News/Angry_Demon.xml"/>
+	<monster name="Bane of Light" file="News/Bane_of_Light.xml"/>
+	<monster name="Burrowing Beetle" file="News/Burrowing_Beetle.xml"/>
+	<monster name="Cave Spider" file="News/Cave_Spider.xml"/>
+	<monster name="Dawn Bat" file="News/Dawn_Bat.xml"/>
+	<monster name="Dreadmaw" file="News/Dreadmaw.xml"/>
+	<monster name="Duskbringer" file="News/Duskbringer.xml"/>
+	<monster name="Eclipse Knight" file="News/Eclipse_Knight.xml"/>
+	<monster name="Essence of Darkness" file="News/Essence_of_Darkness.xml"/>
+	<monster name="Fahim the Wise" file="News/Fahim_the_Wise.xml"/>
+	<monster name="Flame of Omrafir" file="News/Flame_of_Omrafir.xml"/>
+	<monster name="Fleabringer" file="News/Fleabringer.xml"/>
+	<monster name="Frost Servant" file="News/Frost_Servant.xml"/>
 </monsters>

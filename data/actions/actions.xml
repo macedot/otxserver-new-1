@@ -387,6 +387,11 @@
 	<action itemid="25395" script="quests/mysterious ornate/mysteriousMetalEgg.lua"/>
 	<action itemid="21382" script="quests/mysterious ornate/mysteriousMetalEgg.lua"/>
 
+	<!-- Meriana Quest -->
+	<action fromaid="8050" toaid="8052" script="quests/meriana quest/treasure_map.lua"/>
+	<action uniqueid="8053" script="quests/meriana quest/tortoiseegg.lua"/>
+
+	<!-- Mounts Items -->
 	<!-- Mounts Items -->
 	<action itemid="5907" script="others/mounts/mounts.lua" />
 	<action itemid="13247" script="others/mounts/mounts.lua" />

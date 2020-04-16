@@ -117,10 +117,6 @@
 	<!-- Edron Troll Cave - Rope Quest -->
 	<movevent event="StepIn" actionid="4254" script="others/quests/edronRope.lua" />
 
-	<!-- Extension MOTA -->
-	<movevent event="StepIn" actionid="64015" script="quests/extension MOTA/extension MOTA Entrance.lua" />
-	<movevent event="StepIn" actionid="64016" script="quests/extension MOTA/extension MOTA Exit.lua" />
-
 	<!-- Explorer Society (Calassa) -->
 	<movevent event="StepIn" actionid="2070" script="others/teleports/calassa.lua" />
 	<movevent event="StepIn" fromaid="14171" toaid="14172" script="quests/explorer society/carvingTPPortHope.lua" /> <!-- tp Port Hope - Northport -->
@@ -323,8 +319,6 @@
 	<movevent event="StepIn" actionid="5555" script="others/teleports/sorcererGuildThais.lua" />
 	<movevent event="StepIn" fromaid="50084" toaid="50086" script="others/teleports/deeperBanutaShortcutTeleports.lua" />
 	<movevent event="StepIn" fromaid="50220" toaid="50229" script="others/teleports/vengothTeleports.lua" />
-	<movevent event="StepIn" actionid="64017" script="others/teleports/portHopeDeathlingsEntrance.lua" />
-	<movevent event="StepIn" actionid="64018" script="others/teleports/portHopeDeathlingsExit.lua" />
 
 	<!-- Thais Lighthouse Quest -->
 	<movevent event="StepIn" fromaid="50025" toaid="50026" script="others/quests/thaisLighthouse.lua" />
@@ -334,13 +328,14 @@
 	<movevent event="StepIn" fromaid="4226" toaid ="4243" script="others/teleports/spikeTeleports.lua" />
 
 	<!-- The Secret Library -->
+	<movevent event="StepIn" fromaid="64007" toaid="64012" script="quests/the secret library/Falcons Castle/falcons_teleport.lua" />
 	<movevent event="StepIn" fromaid="64013" toaid="64014" script="quests/the secret library/deep desert/deep_desert_teleports.lua" />
-	<movevent event="StepIn" fromaid="64007" toaid="64012" script="quests/the secret library/falcons_teleport.lua" />
-
-	<movevent event="StepIn" actionid="57604" script="falcon castle/portal.lua" />
-	<movevent event="StepIn" actionid="57602" script="falcon castle/portal.lua" />
-	<movevent event="StepIn" actionid="57699" script="falcon castle/portal.lua" />
-	<movevent event="StepIn" actionid="3255" script="falcon castle/portal.lua" />
+	<movevent event="StepIn" fromaid="64015" toaid="64016" script="quests/the secret library/extension MOTA/extension MOTA Teleport.lua" />
+	<movevent event="StepIn" fromaid="64017" toaid="64018" script="quests/the secret library/Deathlings/Deathlings_Teleport.lua" />
+	<movevent event="StepIn" actionid="57604" script="quests/the secret library/Falcons Castle/falcons_teleport.lua" />
+	<movevent event="StepIn" actionid="57602" script="quests/the secret library/Falcons Castle/falcons_teleport.lua" />
+	<movevent event="StepIn" actionid="57699" script="quests/the secret library/Falcons Castle/falcons_teleport.lua" />
+	<movevent event="StepIn" actionid="3255" script="quests/the secret library/Falcons Castle/falcons_teleport.lua" />
 
 	<!-- The Sharttered Isles Quest -->
 	<movevent event="StepIn" actionid="12585" script="quests/the sharttered isles/teleport.lua" />

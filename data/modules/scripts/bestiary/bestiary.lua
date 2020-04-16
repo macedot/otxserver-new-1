@@ -2,8 +2,11 @@ Bestiary = {}
 
 Bestiary.Credits = {
 	Developer = "fernando mieza (flyckks), gpedro, lbaah, Ticardo (Rick), DudZ",
-	Version = "1.0",
-	lastUpdate = "31/03/2020 - 12:00"
+	Version = "1.1",
+	lastUpdate = "01/04/2020 - 12:00",
+	todo = {"Add modifiers for the runes implementation",
+			"Add correct monster locations in the bestiary",
+			"Fix monster occurency"}
 }
 
 Bestiary.Config = {
@@ -22,7 +25,8 @@ Bestiary.S_Packets = {
     SendBestiaryOverview = 0xd6,
     SendBestiaryMonsterData = 0xd7,
 	SendBestiaryCharmsData = 0xd8,
-	SendBestiaryTracker = 0xd9
+	SendBestiaryTracker = 0xd9,
+
 }
 
 Bestiary.C_Packets = {
@@ -58,8 +62,7 @@ Bestiary.sendCreatures = function(player, msg)
     if not playerLocal then
         return true
     end
-
- 	local text = ""
+	local text = ""
 	local monsterIDs ={}
     local search = msg:getByte()
 	if search == 1 then
@@ -68,8 +71,9 @@ Bestiary.sendCreatures = function(player, msg)
 			table.insert(monsterIDs, msg:getU16())
 		end
 	else
-
+	
 		local raceName = msg:getString()
+
 		local race = Bestiary.findRaceByName(raceName)
 		if not race then
 			print("> [Bestiary]: race was not found: "..raceName .." | search " .. search)
@@ -78,7 +82,6 @@ Bestiary.sendCreatures = function(player, msg)
 		monsterIDs = race.monsters
 		text = race.name
 	end
-
     local msg = NetworkMessage()
     msg:addByte(Bestiary.S_Packets.SendBestiaryOverview)
     msg:addString(text) -- race name
@@ -197,7 +200,6 @@ Bestiary.sendBuyCharmRune = function(player, msg)
 		local curBit = player:getCharmUnlockedRunesBit()
 		player:setCharmUnlockedRuneBit(Bestiary.bitToggle(curBit, thisCharm.id, true))
 		curBit = player:getCharmUnlockedRunesBit()
-
 	elseif action == 1 then -- set creature
 		local usedRunes = player:getCharmUsedRuneBitAll()
 		local hasExpansion = player:getCharmRuneSlotExpansion()
@@ -275,6 +277,7 @@ Bestiary.sendMonsterData = function(player, msg)
         return true
     end
     local killCounter = player:getBestiaryKillCount(Bestiary.MonstersName[bestiaryMonster.name])
+
 	local currentLevel = Bestiary.GetKillStatus(bestiaryMonster, killCounter)
 
     local msg = NetworkMessage()
@@ -290,11 +293,9 @@ Bestiary.sendMonsterData = function(player, msg)
     msg:addU16(bestiaryMonster.toKill)  -- max kill third phase
 
     msg:addByte(bestiaryMonster.Stars)  -- Difficult
-	local monsterOccurency = Bestiary.getMonsterOccurrencyByName(bestiaryMonster.name)
-	msg:addByte(1) -- TODO Occurency
+	msg:addByte(bestiaryMonster.Occurrence)  -- Occurency
 	local monsterLoot = monster:getLoot()
     msg:addByte(#monsterLoot)
-
     if #monsterLoot > 0 then
         for i = 1, #monsterLoot do
             local loot = monsterLoot[i]
@@ -302,6 +303,7 @@ Bestiary.sendMonsterData = function(player, msg)
             if item then 
                 local type = 0 -- TODO 0 = normal loot   /  1 = special event loot
                 local difficult = Bestiary.calculateDifficult(loot.chance)
+
 				msg:addItemId(currentLevel > 1 and loot.itemId or 0)
 				msg:addByte(difficult)
 				msg:addByte(type)
@@ -388,16 +390,6 @@ Bestiary.calculateDifficult = function (chance)
         return 1
     end
     return 0
-end
-
-Bestiary.getMonsterOccurrencyByName = function(monsterName)
-	for i, b in pairs(Bestiary.MonstersOccurrency) do
-		if table.contains(b.monsters, monsterName) then
-			return i
-		end
-	end
-	return Bestiary.Occurrencies.HARMLESS_ORDINARY
-
 end
 
 function onRecvbyte(player, msg, byte)
@@ -558,7 +550,7 @@ function Player.addBestiaryKill(self, monsterID) --MonsterID can be Name
 	if curCount == 0 then
 		self:sendBestiaryEntryChanged(monsterID)
 		self:setBestiaryKillCount(monsterID, 1)
-		self:sendTextMessage(MESSAGE_STATUS_SMALL, 'You unlocked details for creature "'..monster.name..'" ')
+		self:sendTextMessage(MESSAGE_STATUS_DEFAULT, 'You unlocked details for the creature "'..monster.name..'"')
 		return
 	end
 
@@ -567,14 +559,15 @@ function Player.addBestiaryKill(self, monsterID) --MonsterID can be Name
 	self:setBestiaryKillCount(monsterID, curCount)
 	
     if curCount == monster.FirstUnlock or curCount == monster.SecondUnlock then
-    	self:sendTextMessage(MESSAGE_STATUS_SMALL, 'You unlocked details for creature "'..monster.name..'".')
+    	self:sendTextMessage(MESSAGE_STATUS_DEFAULT, 'You unlocked details for the creature "'..monster.name..'"')
 		self:sendBestiaryEntryChanged(monsterID)
     elseif curCount == monster.toKill then
-    	self:sendTextMessage(MESSAGE_STATUS_SMALL, 'You unlocked full details for creature "'..monster.name..'"!')
+    	self:sendTextMessage(MESSAGE_STATUS_DEFAULT, 'You unlocked details for the creature "'..monster.name..'"')
 		self:addCharmPoints(monster.CharmsPoints)
 		self:sendBestiaryEntryChanged(monsterID)
 	end	
 end
+
 
 function Player.getCharmFromTarget(self, target)
 	local bestiaryEntry = Bestiary.MonstersName[target:getName()]
@@ -595,6 +588,7 @@ function Player.getCharmFromTarget(self, target)
 	return nil
 end
 
+
 function Player.sendBestiaryEntryChanged(self, monsterID)
     local msg = NetworkMessage()
     msg:addByte(Bestiary.S_Packets.SendBestiaryTracker)
@@ -602,8 +596,8 @@ function Player.sendBestiaryEntryChanged(self, monsterID)
     msg:sendToPlayer(self)
 end
 
+
 Bestiary.bitToggle = function(input, id, on)  -- to add, we use |, which means OR, which in turns make sue that the final number has the flags which both of the left sided and right sided has
-	print(on)
 	if on then
 		return bit.bor(input, Bestiary.CharmsBinaries[id])
 	else

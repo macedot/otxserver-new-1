@@ -1522,7 +1522,7 @@ bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*
 		return false;
 	}
 
-	if (money <= 0) {
+	if (money == 0) {
 		return true;
 	}
 
@@ -1598,7 +1598,6 @@ bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*
 			break;
 		}
 	}
-	moneyMap.clear();
 
 	if (useBalance && player && player->getBankBalance() >= money) {
 		player->setBankBalance(player->getBankBalance() - money);
@@ -5935,10 +5934,7 @@ void Game::playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t spr
 			}
 		}
 
-		if(fee <= player->getBankBalance())
-		{
-			player->setBankBalance(player->getBankBalance() - fee);
-		}
+		g_game.removeMoney(player, fee, 0, true);
 		else
 		{
 			uint64_t remainsFee = 0;
@@ -5955,17 +5951,7 @@ void Game::playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t spr
 			return;
 		}
 
-		// Have enough money on the bank
-		if(totalPrice <= player->getBankBalance())
-		{
-			player->setBankBalance(player->getBankBalance() - totalPrice);
-		}
-		else
-		{
-			uint64_t remainsPrice = 0;
-			remainsPrice = totalPrice - player->getBankBalance();
-			g_game.removeMoney(player, remainsPrice);
-		}
+		g_game.removeMoney(player, totalPrice, 0, true);
 	}
 
 	IOMarket::createOffer(player->getGUID(), static_cast<MarketAction_t>(type), it.id, amount, price, anonymous);
