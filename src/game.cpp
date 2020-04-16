@@ -5935,14 +5935,6 @@ void Game::playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t spr
 		}
 
 		g_game.removeMoney(player, fee, 0, true);
-		else
-		{
-			uint64_t remainsFee = 0;
-			remainsFee = fee - player->getBankBalance();
-			player->setBankBalance(0);
-			g_game.removeMoney(player, remainsFee);
-		}
-		
 	} else {
 
 		uint64_t totalPrice = price * amount;
