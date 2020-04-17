@@ -227,10 +227,12 @@ function onUseShovel(player, item, fromPosition, target, toPosition, isHotkey)
 		return false
 	end
 
+	local targetId = target.itemid
 	local groundId = ground:getId()
-	if table.contains(holes, groundId) then
-		ground:transform(groundId + 1)
-		ground:decay()
+
+	if table.contains(holes, targetId) then
+		target:transform(targetId + 1)
+		target:decay()
 		toPosition.z = toPosition.z + 1
 		tile:relocateTo(toPosition)
 
