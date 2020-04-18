@@ -22,44 +22,6 @@
 
 Download SDK (Software Development Kit) for OTX Server [DOWNLOAD HERE](https://gitlab.com/guilhermesidney/cliente10/-/archive/master/cliente10-master.zip)
 
-<h2>Maps Features</h2>
-<table>
-    <tbody>
-        <tr>
-          <td>Secret Library</td>           
-          <td>Mota Extension</td>
-          <td>New Asuras</td>
-          <td>Falcon Bastion</td>
-          <td>Warzones 4, 5, 6</td>
-          <td>Cults of Tibia</td>          
-        </tr>
-    </tbody>
-</table>
-<table>
-    <tbody>
-        <tr>
-          <td>First Dragon</td>           
-          <td>Darashia Elite Dungeon</td>
-          <td>New Asuras</td>
-          <td>Cursed Spreads (Full Grimvale)</td>
-          <td>New Deathlings</td>          
-        </tr>
-    </tbody>
-</table>
-
-<h2>Extra Features</h2>
-<table>
-    <tbody>
-        <tr>
-          <td>New Depot</td>           
-          <td>New Spawn</td>
-          <td>New Cast System</td>
-          <td>New Npc System via Bank Balance</td>
-          <td>new Critical Boost System</td>
-          <td>New Potions</td>          
-        </tr>
-    </tbody>
-</table>
 <table>
     <tbody>
         <tr>
@@ -90,13 +52,7 @@ Our system can be compiled on a variety of operating systems. We currently provi
 
 <h2>Websites</h2>
 
-by [Gustavo Girardon](http://github.com/gutogirardon) -> [Download here](https://github.com/gutogirardon/Elderia-Global-Gesior/archive/master.zip)
-
-by [Leonardo Pereira](http://github.com/jlcvp) -> [Download here](https://github.com/jlcvp/GesiorMonteiro/archive/master.zip)
-
-by [Marco Oliveira](http://github.com/marcomoa) -> [Download here](https://github.com/marcomoa/Gesior-AAC/archive/master.zip)
-
-by [Ricardo Souza](http://github.com/Riicksouza) -> [Download here](https://github.com/Riicksouzaa/TheRealGesiorFerobra/archive/master.zip)
+by [Marco Oliveira](https://github.com/omarcopires) -> [Download here](https://github.com/omarcopires/gesior/archive/master.zip)
 
 <h2>Contact</h2>
 
@@ -105,8 +61,6 @@ Facebook: www.facebook.com/erick.nunes.75
 Skype: e_nunes@live.com
 
 [Whatsapp Invite](https://chat.whatsapp.com/JtKmezKYrw5DEK5Zl9qvPw)
-
-[Discord Channel](https://discord.gg/7dnCeau)
 
 <h2>Contributors</h2>
 Contributions of any kind are welcome!
