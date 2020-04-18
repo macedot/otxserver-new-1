@@ -1298,6 +1298,12 @@ class Player final : public Creature, public Cylinder
 			}
 		}
 
+		void sendDepotStash(bool enabled) {
+			if (client) {
+				client->sendDepotStash(enabled);
+			}
+		}
+
 		void sendStoreOpen(uint8_t serviceType) {
 			if (client) {
 				client->sendOpenStore(serviceType);

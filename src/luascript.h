@@ -1053,6 +1053,9 @@ class LuaScriptInterface
 		static int luaPlayerGetBonusRerollCount(lua_State* L);
 		static int luaPlayerSetBonusRerollCount(lua_State* L);
 
+		// Stash
+		static int luaPlayerSetDepotStash(lua_State* L);
+
 		// Monster
 		static int luaMonsterCreate(lua_State* L);
 

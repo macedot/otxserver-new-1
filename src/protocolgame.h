@@ -372,6 +372,9 @@ class ProtocolGame final : public Protocol
 		void MoveUpCreature(NetworkMessage& msg, const Creature* creature, const Position& newPos, const Position& oldPos);
 		void MoveDownCreature(NetworkMessage& msg, const Creature* creature, const Position& newPos, const Position& oldPos);
 
+		// stash supply
+		void sendDepotStash(bool enable);
+
 		//shop
 		void AddShopItem(NetworkMessage& msg, const ShopInfo& item);
 
