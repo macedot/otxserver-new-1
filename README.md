@@ -7,7 +7,6 @@
 
 <h2>Tools and Clients</h2>
 
-
 Download SDK (Software Development Kit) for OTX Server [DOWNLOAD HERE](https://gitlab.com/guilhermesidney/cliente10/-/archive/master/cliente10-master.zip)
 
 <h2>Websites</h2>
@@ -20,7 +19,7 @@ Facebook: www.facebook.com/erick.nunes.75
 
 Skype: e_nunes@live.com
 
-[Whatsapp Invite](https://chat.whatsapp.com/JtKmezKYrw5DEK5Zl9qvPw)
+[Whatsapp]: +5544998940391
 
 <h2>Contributors</h2>
 Contributions of any kind are welcome!
