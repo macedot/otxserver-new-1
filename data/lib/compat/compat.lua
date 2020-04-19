@@ -505,7 +505,6 @@ function isPremium(cid) local p = Player(cid) return p ~= nil and p:isPremium() 
 function getBlessingsCost(level) return Blessings.getBlessingsCost(level) end
 function getPvpBlessingCost(level) return Blessings.getPvpBlessingCost(level) end
 function getPlayersByIPAddress(ip, mask)
-function getPlayersByIPAddress(ip, mask)
 	if mask == nil then mask = 0xFFFFFFFF end
 	local masked = bit.band(ip, mask)
 	local result = {}
