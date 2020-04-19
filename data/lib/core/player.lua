@@ -125,19 +125,6 @@ function Player.getDepotItems(self, depotId)
 	return self:getDepotChest(depotId, true):getItemHoldingCount()
 end
 
-function Player.getLossPercent(self)
-	local lossPercent = {
-		[0] = 100,
-		[1] = 70,
-		[2] = 45,
-		[3] = 25,
-		[4] = 10,
-		[5] = 0
-	}
-
-	return lossPercent[self:getBlessings()]
-end
-
 function Player.hasAllowMovement(self)
 	return self:getStorageValue(STORAGE.blockMovementStorage) ~= 1
 end
