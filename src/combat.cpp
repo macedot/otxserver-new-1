@@ -1043,6 +1043,7 @@ void ValueCallback::getMinMaxValues(Player* player, CombatDamage& damage) const
 			//onGetPlayerMinMaxValues(player, attackSkill, attackValue, attackFactor)
 			Item* tool = player->getWeapon();
 			const Weapon* weapon = g_weapons->getWeapon(tool);
+			Item* item = nullptr;
 
 			if (weapon) {
 				attackValue = tool->getAttack();
@@ -1067,7 +1068,7 @@ void ValueCallback::getMinMaxValues(Player* player, CombatDamage& damage) const
 				}
 			}
 
-			lua_pushnumber(L, player->getWeaponSkill(tool));
+			lua_pushnumber(L, player->getWeaponSkill(item ? item : tool));
 			lua_pushnumber(L, attackValue);
 			lua_pushnumber(L, player->getAttackFactor());
 			parameters += 3;
