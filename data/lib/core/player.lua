@@ -159,7 +159,11 @@ function Player.isSorcerer(self)
 end
 
 function Player.hasFlag(self, flag)
-	return self:getGroup():hasFlag(flag)
+    if not flag or type(flag) ~= 'number' then
+        return false
+    end
+
+    return bit.band(self:getGroup():getFlags(), flag) ~= 0
 end
 
 function Player.isPremium(self)
