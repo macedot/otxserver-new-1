@@ -1,6 +1,8 @@
 /**
+ * @file events.cpp
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1082,6 +1084,16 @@ void Events::eventPlayerOnCombat(Player* player, Creature* target, Item* item, C
 		if (damage.primary.type != COMBAT_HEALING) {
 			damage.primary.value = -damage.primary.value;
 			damage.secondary.value = -damage.secondary.value;
+		}
+		/*
+			Only EK with dealing physical damage will get elemental damage on skill
+		*/
+		if (damage.origin == ORIGIN_SPELL) {
+			if (player->getVocationId() != 4 && player->getVocationId() != 8) {
+				damage.primary.value = damage.primary.value + damage.secondary.value;
+				damage.secondary.type = COMBAT_NONE;
+				damage.secondary.value = 0;
+			}
 		}
 	}
 

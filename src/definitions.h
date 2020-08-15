@@ -1,6 +1,8 @@
  /**
+ * @file definitions.h
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,22 +19,16 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef FS_DEFINITIONS_H_877452FEC245450C9F96B8FD268D8963
-#define FS_DEFINITIONS_H_877452FEC245450C9F96B8FD268D8963
+#ifndef OT_SRC_DEFINITIONS_H_
+#define OT_SRC_DEFINITIONS_H_
 
-static constexpr auto STATUS_SERVER_NAME = "OTXServer Global";
-static constexpr auto STATUS_SERVER_VERSION = "Based on TFS 1";
-static constexpr auto MINOR_VERSION = "3";
-static constexpr auto STATUS_SERVER_CREDITS = "OTXServer Global Contributors and The Forgotten Server Developers";
-static constexpr auto STATUS_SERVER_CONTRIBUTORS = "All Forums Members.";
-static constexpr auto GIT_ISSUE_INFO = "If you find issues or bugs, make a report.";
-static constexpr auto GIT_ISSUE = "https://github.com/malucooo/otxserver-new/issues";
-static constexpr auto GIT_REPO = "https://github.com/malucooo/otxserver-new/";
-static constexpr auto GIT_CONTRIBUTORS = "https://github.com/malucooo/otxserver-new/graphs/contributors";
+static constexpr auto STATUS_SERVER_NAME = "OTXServer-Global";
+static constexpr auto STATUS_SERVER_VERSION = "1.3";
+static constexpr auto STATUS_SERVER_CREDITS = "The Forgotten Server Developers";
 
 static constexpr auto CLIENT_VERSION_MIN = 1100;
-static constexpr auto CLIENT_VERSION_MAX = 1200;
-static constexpr auto CLIENT_VERSION_STR = "12.00";
+static constexpr auto CLIENT_VERSION_MAX = 1235;
+static constexpr auto CLIENT_VERSION_STR = "12.35";
 
 static constexpr auto AUTHENTICATOR_DIGITS = 6U;
 static constexpr auto AUTHENTICATOR_PERIOD = 30U;

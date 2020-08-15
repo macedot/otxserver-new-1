@@ -1,6 +1,8 @@
 /**
+ * @file protocollogin.cpp
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,7 +83,7 @@ void ProtocolLogin::getCharacterList(const std::string& accountName, const std::
 	output->addString(g_config.getString(ConfigManager::SERVER_NAME));
 	output->addString(g_config.getString(ConfigManager::IP));
 
-	output->add<uint16_t>(g_config.getNumber(ConfigManager::GAME_PORT));
+	output->add<uint16_t>(g_config.getShortNumber(ConfigManager::GAME_PORT));
 
 	output->addByte(0);
 	//
@@ -138,17 +140,18 @@ void ProtocolLogin::onRecvFirstMessage(NetworkMessage& msg)
 	}
 
 	if (!Protocol::RSA_decrypt(msg)) {
+		std::cout << "[ProtocolLogin::onRecvFirstMessage] RSA Decrypt Failed" << std::endl;
 		disconnect();
 		return;
 	}
 
-	uint32_t key[4];
+	xtea::key key;
 	key[0] = msg.get<uint32_t>();
 	key[1] = msg.get<uint32_t>();
 	key[2] = msg.get<uint32_t>();
 	key[3] = msg.get<uint32_t>();
 	enableXTEAEncryption();
-	setXTEAKey(key);
+	setXTEAKey(std::move(key));
 
 	if (version < g_config.getNumber(ConfigManager::VERSION_MIN) || version > g_config.getNumber(ConfigManager::VERSION_MAX)) {
 		std::ostringstream ss;
@@ -168,12 +171,12 @@ void ProtocolLogin::onRecvFirstMessage(NetworkMessage& msg)
 	}
 
 	BanInfo banInfo;
-	auto connection = getConnection();
-	if (!connection) {
+	auto curConnection = getConnection();
+	if (!curConnection) {
 		return;
 	}
 
-	if (IOBan::isIpBanned(connection->getIP(), banInfo)) {
+	if (IOBan::isIpBanned(curConnection->getIP(), banInfo)) {
 		if (banInfo.reason.empty()) {
 			banInfo.reason = "(none)";
 		}

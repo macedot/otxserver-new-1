@@ -1,6 +1,8 @@
 /**
+ * @file otserv.cpp
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +30,7 @@
 #include "configmanager.h"
 #include "scriptmanager.h"
 #include "rsa.h"
+#include "prey.h"
 #include "protocolold.h"
 #include "protocollogin.h"
 #include "protocolstatus.h"
@@ -47,6 +50,7 @@ Monsters g_monsters;
 Vocations g_vocations;
 extern Scripts* g_scripts;
 RSA g_RSA;
+Prey g_prey;
 
 std::mutex g_loaderLock;
 std::condition_variable g_loaderSignal;
@@ -70,6 +74,10 @@ void badAllocationHandler()
 
 int main(int argc, char* argv[])
 {
+#ifdef DEBUG_LOG
+	spdlog::set_pattern("[%Y-%d-%m %H:%M:%S.%e] [file %@] [func %!] [thread %t] [%l] %v ");
+	SPDLOG_DEBUG("[OTSERV] SPDLOG LOG DEBUG ENABLED");
+#endif
 	// Setup bad allocation handler
 	std::set_new_handler(badAllocationHandler);
 
@@ -83,6 +91,7 @@ int main(int argc, char* argv[])
 	g_loaderSignal.wait(g_loaderUniqueLock);
 
 	if (serviceManager.is_running()) {
+
 		std::cout << ">> " << g_config.getString(ConfigManager::SERVER_NAME) << " Server Online!" << std::endl << std::endl;
 		serviceManager.run();
 	} else {
@@ -107,7 +116,7 @@ void mainLoader(int argc, char* argv[], ServiceManager* services)
 #ifdef _WIN32
 	SetConsoleTitle(STATUS_SERVER_NAME);
 #endif
-	std::cout << "The " << STATUS_SERVER_NAME << " Global - Version: (" << STATUS_SERVER_VERSION << "." << MINOR_VERSION << ")" << std::endl;
+	std::cout << "The " << STATUS_SERVER_NAME << " - Version: (" << STATUS_SERVER_VERSION << ")" << std::endl;
 	std::cout << "Compiled with: " << BOOST_COMPILER << std::endl;
 	std::cout << "Compiled on " << __DATE__ << ' ' << __TIME__ << " for platform ";
 
@@ -123,11 +132,7 @@ void mainLoader(int argc, char* argv[], ServiceManager* services)
 	std::cout << std::endl;
 
 	std::cout << "Special Credits for: " << STATUS_SERVER_CREDITS << "." << std::endl;
-	std::cout << "A server developed by " << STATUS_SERVER_CONTRIBUTORS << "." << std::endl;
-	std::cout << "Visit our forum for updates, support, and resources: " << GIT_REPO <<"." << std::endl;
-	std::cout << "For report issues or debugs please acess: " << GIT_ISSUE <<"." << std::endl;
-	std::cout << "List of contributors: " << GIT_CONTRIBUTORS <<"." << std::endl;
-	std::cout << GIT_ISSUE_INFO << std::endl;
+	std::cout << "Link of repository: https://github.com/malucooo/otxserver-new/" << std::endl;
 	std::cout << std::endl;
 
 	// TODO: dirty for now; Use stdarg;
@@ -206,9 +211,21 @@ void mainLoader(int argc, char* argv[], ServiceManager* services)
 		return;
 	}
 
+	std::cout << ">> Loading lua scripts" << std::endl;
+	if (!g_scripts->loadScripts("scripts", false, false)) {
+		startupErrorMessage("Failed to load lua scripts");
+		return;
+	}
+
 	std::cout << ">> Loading monsters" << std::endl;
 	if (!g_monsters.loadFromXml()) {
 		startupErrorMessage("Unable to load monsters!");
+		return;
+	}
+
+	std::cout << ">> Loading lua monsters" << std::endl;
+	if (!g_scripts->loadScripts("monster", false, false)) {
+		startupErrorMessage("Failed to load lua monsters");
 		return;
 	}
 
@@ -218,9 +235,9 @@ void mainLoader(int argc, char* argv[], ServiceManager* services)
 		return;
 	}
 
-	std::cout << ">> Loading lua scripts" << std::endl;
-	if (!g_scripts->loadScripts("scripts", false, false)) {
-		startupErrorMessage("Failed to load lua scripts");
+	std::cout << ">> Loading prey data" << std::endl;
+	if (!g_prey.loadFromXml()) {
+		startupErrorMessage("Unable to load prey data!");
 		return;
 	}
 

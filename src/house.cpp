@@ -1,6 +1,8 @@
 /**
+ * @file house.cpp
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -232,7 +234,8 @@ bool House::transferToDepot(Player* player) const
 				if (item->isWrapable()) {
 					std::string itemName = item->getName();
 					uint16_t itemID = item->getID();
-					Item* newItem = g_game.transformItem(item, 26054);
+					uint16_t newWrapId = Item::items[item->getID()].wrapableTo;
+					Item* newItem = g_game.transformItem(item, newWrapId);
 					newItem->setIntAttr(ITEM_ATTRIBUTE_ACTIONID, itemID);
 					std::ostringstream ss;
 					ss << "Unwrap it in your own house to create a <" << itemName << ">.";
@@ -401,18 +404,18 @@ bool House::executeTransfer(HouseTransferItem* item, Player* newOwner)
 	return true;
 }
 
-void AccessList::parseList(const std::string& list)
+void AccessList::parseList(const std::string& listToParse)
 {
 	playerList.clear();
 	guildRankList.clear();
 	expressionList.clear();
 	regExList.clear();
-	this->list = list;
-	if (list.empty()) {
+	this->list = listToParse;
+	if (listToParse.empty()) {
 		return;
 	}
 
-	std::istringstream listStream(list);
+	std::istringstream listStream(listToParse);
 	std::string line;
 
 	while (getline(listStream, line)) {
@@ -550,9 +553,9 @@ bool AccessList::isInList(const Player* player)
 	return rank && guildRankList.find(rank->id) != guildRankList.end();
 }
 
-void AccessList::getList(std::string& list) const
+void AccessList::getList(std::string& retList) const
 {
-	list = this->list;
+	retList = this->list;
 }
 
 Door::Door(uint16_t type) :	Item(type) {}
@@ -571,13 +574,13 @@ Attr_ReadValue Door::readAttr(AttrTypes_t attr, PropStream& propStream)
 	return Item::readAttr(attr, propStream);
 }
 
-void Door::setHouse(House* house)
+void Door::setHouse(House* newHouse)
 {
 	if (this->house != nullptr) {
 		return;
 	}
 
-	this->house = house;
+	this->house = newHouse;
 
 	if (!accessList) {
 		accessList.reset(new AccessList());

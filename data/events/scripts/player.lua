@@ -1,13 +1,16 @@
 -- Internal Use
 STONE_SKIN_AMULET = 2197
-GOLD_POUNCH = 26377
+GOLD_POUCH = 26377
 ITEM_STORE_INBOX = 26052
-CONTAINER_WEIGHT = 100000 -- 10k = 10000 oz | this function is only for containers, item below the weight determined here can be moved inside the container, for others items look game.cpp at the src
--- exercise_ids
-local exercise_ids = {32384,32385,32386,32387,32388,32389,32124,32125,32126,32127,32128,32129}
 
--- No move items with actionID 8000
-NOT_MOVEABLE_ACTION = 8000
+DISABLE_CONTAINER_WEIGHT = 0 -- 0 = ENABLE CONTAINER WEIGHT CHECK | 1 = DISABLE CONTAINER WEIGHT CHECK
+CONTAINER_WEIGHT = 1000000 -- 1000000 = 10k = 10000.00 oz | this function is only for containers, item below the weight determined here can be moved inside the container, for others items look game.cpp at the src
+
+-- Items sold on the store that should not be moved off the store container
+local storeItemID = {32384,32385,32386,32387,32388,32389,32124,32125,32126,32127,32128,32129,32109,33299,26378,29020,32109}
+
+-- No move/trade items with actionID 8000
+BLOCK_ITEM_WITH_ACTION = 8000
 
 -- Capacity imbuement store
 local STORAGE_CAPACITY_IMBUEMENT = 42154
@@ -151,6 +154,18 @@ function Player:onLook(thing, position, distance)
 				description = string.format("%s, Unique ID: %d", description, uniqueId)
 			end
 
+			if thing:isContainer() then
+				local quickLootCategories = {}
+				local container = Container(thing.uid)
+				for categoryId = LOOT_START, LOOT_END do
+					if container:hasQuickLootCategory(categoryId) then
+						table.insert(quickLootCategories, categoryId)
+					end
+				end
+
+				description = string.format("%s, QuickLootCategory: (%s)", description, table.concat(quickLootCategories, ", "))
+			end
+
 			local itemType = thing:getType()
 
 			local transformEquipId = itemType:getTransformEquipId()
@@ -185,13 +200,6 @@ function Player:onLook(thing, position, distance)
 			end
 		end
 	end
-
-	if thing:isCreature() then
-		if thing:isPlayer() then
-			local KD = (math.max(0, thing:getStorageValue(STORAGEVALUE_KILLS)) + math.max(0, thing:getStorageValue(STORAGEVALUE_ASSISTS))) / math.max(1, thing:getStorageValue(STORAGEVALUE_DEATHS))
-			description = string.format("%s\nKD: [%0.2f]", description, KD)
-		end
-	end
 	self:sendTextMessage(MESSAGE_INFO_DESCR, description)
 end
 
@@ -219,11 +227,6 @@ function Player:onLookInBattleList(creature, distance)
 		if creature:isPlayer() then
 			description = string.format("%s\nIP: %s", description, Game.convertIpToString(creature:getIp()))
 		end
-	end
-
-	if creature:isPlayer() then
-		local KD = (math.max(0, creature:getStorageValue(STORAGEVALUE_KILLS)) + math.max(0, creature:getStorageValue(STORAGEVALUE_ASSISTS))) / math.max(1, creature:getStorageValue(STORAGEVALUE_DEATHS))
-		description = string.format("%s\nKD: [%0.2f]", description, KD)
 	end
 	self:sendTextMessage(MESSAGE_INFO_DESCR, description)
 end
@@ -286,8 +289,13 @@ local function antiPush(self, item, count, fromPosition, toPosition, fromCylinde
 end
 
 function Player:onMoveItem(item, count, fromPosition, toPosition, fromCylinder, toCylinder)
-  -- Exercise Weapons
-    if isInArray(exercise_ids,item.itemid) then
+	-- No move items with actionID = 8000
+	if item:getActionId() == BLOCK_ITEM_WITH_ACTION then
+		self:sendCancelMessage(RETURNVALUE_NOTPOSSIBLE)
+		return false
+	end
+	-- Store Items
+    if isInArray(storeItemID,item.itemid) then
         self:sendCancelMessage('You cannot move this item outside this container.')
         return false
     end
@@ -295,6 +303,12 @@ function Player:onMoveItem(item, count, fromPosition, toPosition, fromCylinder, 
 	local tile = Tile(toPosition)
 	if tile and tile:getItemCount() > 20 then
 		self:sendCancelMessage(RETURNVALUE_NOTPOSSIBLE)
+		return false
+	end
+
+	-- No move parcel very heavy
+	if DISABLE_CONTAINER_WEIGHT == 0 and ItemType(item:getId()):isContainer() and item:getWeight() > CONTAINER_WEIGHT then
+		self:sendCancelMessage("Your cannot move this item too heavy.")
 		return false
 	end
 
@@ -444,8 +458,8 @@ function Player:onMoveItem(item, count, fromPosition, toPosition, fromCylinder, 
 			self:sendCancelMessage(RETURNVALUE_CONTAINERNOTENOUGHROOM)
 			return false
 		end
-		-- Gold Pounch
-		if (containerTo:getId() == GOLD_POUNCH) then
+		-- Gold Pouch
+		if (containerTo:getId() == GOLD_POUCH) then
 			if (not (item:getId() == ITEM_CRYSTAL_COIN or item:getId() == ITEM_PLATINUM_COIN or item:getId() == ITEM_GOLD_COIN)) then
 				self:sendCancelMessage("You can move only money to this container.")
 				return false
@@ -453,20 +467,23 @@ function Player:onMoveItem(item, count, fromPosition, toPosition, fromCylinder, 
 		end
 	end
 
-	-- No move gold pounch
-	if item:getId() == GOLD_POUNCH then
-		self:sendCancelMessage(RETURNVALUE_NOTPOSSIBLE)
-		return false
-	end
-
-	-- No move items with actionID 8000
-	if item:getActionId() == NOT_MOVEABLE_ACTION then
+	-- No move gold pouch
+	if item:getId() == GOLD_POUCH then
 		self:sendCancelMessage(RETURNVALUE_NOTPOSSIBLE)
 		return false
 	end
 
 	-- Check two-handed weapons
 	if toPosition.x ~= CONTAINER_POSITION then
+		if item:isContainer() then
+			local container = Container(item.uid)
+			for categoryId = LOOT_START, LOOT_END do
+				if container:hasQuickLootCategory(categoryId) then
+					container:removeQuickLootCategory(categoryId)
+					self:setQuickLootBackpack(categoryId, nil)
+				end
+			end
+		end
 		return true
 	end
 
@@ -540,14 +557,6 @@ function Player:onMoveItem(item, count, fromPosition, toPosition, fromCylinder, 
 			return false
 		end
 	end
-
-
-	-- No move parcel very heavy
-	if ItemType(item:getId()):isContainer() and item:getWeight() > CONTAINER_WEIGHT then
-        self:sendCancelMessage("Your cannot move this item too heavy.")
-        return false
-    end
-
 
 	if tile and tile:getItemById(370) then -- Trapdoor
 		self:sendCancelMessage(RETURNVALUE_NOTPOSSIBLE)
@@ -644,13 +653,19 @@ function Player:onTurn(direction)
 end
 
 function Player:onTradeRequest(target, item)
-if isInArray(exercise_ids,item.itemid) then
+	-- No trade items with actionID = 8000
+	if item:getActionId() == BLOCK_ITEM_WITH_ACTION then
+		return false
+	end
+
+	if isInArray(storeItemID,item.itemid) then
         return false
     end
  	return true
 end
 
 function Player:onTradeAccept(target, item, targetItem)
+	target:closeImbuementWindow(self)
 	return true
 end
 
@@ -712,40 +727,6 @@ local function useStaminaXp(player)
 	player:setExpBoostStamina(staminaMinutes * 60)
 end
 
--- Prey slots consumption
-local function preyTimeLeft(player, slot)
-	local timeLeft = player:getPreyTimeLeft(slot) / 60
-	if (timeLeft > 0) then
-		local playerId = player:getId()
-		local currentTime = os.time()
-		local timePassed = currentTime - nextPreyTime[playerId][slot]
-		if timePassed > 0 then
-			if timePassed > 60 then
-				if timeLeft > 2 then
-					timeLeft = timeLeft - 2
-				else
-					timeLeft = 0
-				end
-				nextPreyTime[playerId][slot] = currentTime + 120
-			else
-				timeLeft = timeLeft - 1
-				nextPreyTime[playerId][slot] = currentTime + 60
-			end
-		end
-		-- Expiring prey as there's no timeLeft
-		if (timeLeft <= 1) then
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("Your %s's prey has expired.", monster:lower()))
-			player:setPreyCurrentMonster(slot, "")
-		end
-		-- Setting new timeLeft
-		player:setPreyTimeLeft(slot, timeLeft * 60)
-	else
-		-- Expiring prey as there's no timeLeft
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("Your %s's prey has expired.", monster:lower()))
-		player:setPreyCurrentMonster(slot, "")
-	end
-end
-
 function Player:onGainExperience(source, exp, rawExp)
 	if not source or source:isPlayer() then
 		return exp
@@ -759,33 +740,24 @@ function Player:onGainExperience(source, exp, rawExp)
 	end
 
 	-- Experience Stage Multiplier
-	exp = exp * Game.getExperienceStage(self:getLevel())
-	baseExp = rawExp * Game.getExperienceStage(self:getLevel())
+	local expStage = Game.getExperienceStage(self:getLevel())
+	exp = exp * expStage
+	baseExp = rawExp * expStage
 	if Game.getStorageValue(GlobalStorage.XpDisplayMode) > 0 then
-		displayRate = Game.getExperienceStage(self:getLevel())
+		displayRate = expStage
 		else
 		displayRate = 1
 	end
 
-	-- Prey Bonus
-	for slot = CONST_PREY_SLOT_FIRST, CONST_PREY_SLOT_THIRD do
-		if (self:getPreyCurrentMonster(slot) == source:getName() and self:getPreyBonusType(slot) == CONST_BONUS_XP_BONUS) then
-			exp = exp + math.floor(exp * (self:getPreyBonusValue(slot) / 100))
-			preyTimeLeft(self, slot) -- slot consumption
-			break
-		end
-	end
-
 	-- Store Bonus
-	local Boost = self:getExpBoostStamina()
 	useStaminaXp(self) -- Use store boost stamina
-	self:setStoreXpBoost(Boost > 0 and 50 or 0)
-	if (self:getExpBoostStamina() <= 0 and self:getStoreXpBoost() > 0) then
-		self:setStoreXpBoost(0) -- Reset Store boost to 0 if boost stamina has ran out
-	end
-	if (self:getStoreXpBoost() > 0) then
-		exp = exp + (baseExp * (self:getStoreXpBoost()/100)) -- Exp Boost
-		displayRate = displayRate * ((self:getStoreXpBoost()+100)/100)
+	local Boost = self:getExpBoostStamina()
+	local stillHasBoost = Boost > 0
+	local storeXpBoostAmount = stillHasBoost and self:getStoreXpBoost() or 0
+	self:setStoreXpBoost(storeXpBoostAmount) 
+
+	if (storeXpBoostAmount > 0) then
+		exp = exp + (baseExp * (storeXpBoostAmount/100)) -- Exp Boost
 	end
 
 	-- Stamina Bonus
@@ -793,13 +765,11 @@ function Player:onGainExperience(source, exp, rawExp)
 		useStamina(self)
 		local staminaMinutes = self:getStamina()
 		if staminaMinutes > 2400 and self:isPremium() then
-			exp = exp + baseExp * 0.5
-			displayRate = displayRate + Game.getExperienceStage(self:getLevel()) * 0.5
+			exp = exp * 1.5
 			self:setStaminaXpBoost(150)
 		elseif staminaMinutes <= 840 then
-			exp = exp * 0.5
+			exp = exp * 0.5 --TODO destroy loot of people with 840- stamina
 			self:setStaminaXpBoost(50)
-			displayRate = displayRate * 0.5
 		else
 			self:setStaminaXpBoost(100)
 		end
@@ -864,6 +834,12 @@ function Player:canBeAppliedImbuement(imbuement, item)
 	if imbuement:isPremium() and self:getPremiumDays() < 1 then
 		return false
 	end
+	
+	if self:getStorageValue(Storage.ForgottenKnowledge.Tomes) > 0 then
+              imbuable = true 
+   	else         
+              return false      
+   	end
 
 	if not self:canImbueItem(imbuement, item) then
 		return false
@@ -965,16 +941,14 @@ function Player:onCombat(target, item, primaryDamage, primaryType, secondaryDama
 		for i = 0, slots - 1 do
 			local imbuement = item:getImbuement(i)
 			if imbuement then
-				local percent = imbuement:getElementDamage()
+				local percent = imbuement:getElementDamage() 
+				local totalDmg = primaryDamage --store it for damage adjustment
 				if percent and percent > 0 then
 					if primaryDamage ~= 0 then
-						secondaryDamage = primaryDamage*math.min(percent/100, 1)
+						local factor = percent / 100
 						secondaryType = imbuement:getCombatType()
-						primaryDamage = primaryDamage - primaryDamage*math.min(percent/100, 1)
-					elseif secondaryDamage ~= 0 then
-						primaryDamage = secondaryDamage*math.min(percent/100, 1)
-						primaryType = imbuement:getCombatType()
-						secondaryDamage = secondaryDamage - secondaryDamage*math.min(percent/100, 1)
+						primaryDamage = totalDmg * (1 - factor)
+						secondaryDamage = totalDmg * (factor)
 					end
 				end
 			end

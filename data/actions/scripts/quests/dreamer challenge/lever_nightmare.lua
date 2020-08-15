@@ -70,4 +70,4 @@ function onUse(player, item, fromPosition, target, toPosition, isHotkey)
 			player:sendCancelMessage('You still don\'t have permission.')
 		end
 	end
-end 
+end

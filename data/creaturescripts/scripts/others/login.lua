@@ -8,67 +8,6 @@ function Player.sendTibiaTime(self, hours, minutes)
 	return true
 end
 
-local events = {
-    'ParasiteWarzone',
-    'ElementalSpheresOverlords',
-    'BigfootBurdenVersperoth',
-    'BigfootBurdenWiggler',
-    'SvargrondArenaKill',
-    'NewFrontierShardOfCorruption',
-    'NewFrontierTirecz',
-    'ServiceOfYalaharDiseasedTrio',
-    'ServiceOfYalaharAzerus',
-    'ServiceOfYalaharQuaraLeaders',
-    'InquisitionBosses',
-    'InquisitionUngreez',
-    'KillingInTheNameOfKills',
-	'KillingInTheNameOfKillss',
-	'KillingInTheNameOfKillsss',
-    'MastersVoiceServants',
-    'SecretServiceBlackKnight',
-    'ThievesGuildNomad',
-    'WotELizardMagistratus',
-    'WotELizardNoble',
-    'WotEKeeper',
-    'WotEBosses',
-    'WotEZalamon',
-    'WarzoneThree',
-    'PlayerDeath',
-    'AdvanceSave',
-    'bossesWarzone',
-    'AdvanceRookgaard',
-    'PythiusTheRotten',
-    'DropLoot',
-    'Yielothax',
-    'BossParticipation',
-    'Energized Raging Mage',
-    'Raging Mage',
-    'DeathCounter',
-    'KillCounter',
-    'bless1',
-	'lowerRoshamuul',
-	'SpikeTaskQuestCrystal',
-	'SpikeTaskQuestDrillworm',
-	'petlogin',
-	'petthink',
-	'UpperSpikeKill',
-	'MiddleSpikeKill',
-	'LowerSpikeKill',
-	'BossesForgotten',
-	'ReplicaServants',
-	'EnergyPrismDeath',
-	'AstralPower',
-	'BossesKill',
-	'TheShattererKill',
-	'BossesHero',
-	'DragonsKill',
-    'deeplingBosses',
-    'theGreatDragonHuntKill',
-    'bonusPreyLootKill',
-	'BossesTheCurseSpread',
-    'bossesMissionCults'
-}
-
 local function onMovementRemoveProtection(cid, oldPosition, time)
     local player = Player(cid)
     if not player then
@@ -89,7 +28,6 @@ function onLogin(player)
 	if player:getLastLoginSaved() <= 0 then
 		loginStr = loginStr .. ' Please choose your outfit.'
 		player:sendOutfitWindow()
-		player:setBankBalance(0)
 	else
 		if loginStr ~= "" then
 			player:sendTextMessage(MESSAGE_STATUS_DEFAULT, loginStr)
@@ -99,7 +37,6 @@ function onLogin(player)
 	end
 
     player:sendTextMessage(MESSAGE_STATUS_DEFAULT, loginStr)
-	player:openChannel(10) -- LOOT CHANNEL
 
     local playerId = player:getId()
 
@@ -124,13 +61,6 @@ function onLogin(player)
 
     -- EXP Stamina
     nextUseXpStamina[playerId] = 1
-
-    -- New Prey
-    nextPreyTime[playerId] = {
-        [CONST_PREY_SLOT_FIRST] = 1,
-        [CONST_PREY_SLOT_SECOND] = 1,
-        [CONST_PREY_SLOT_THIRD] = 1
-    }
 
     if (player:getAccountType() == ACCOUNT_TYPE_TUTOR) then
         local msg = [[:: Tutor Rules
@@ -174,50 +104,36 @@ function onLogin(player)
         stats.playerId = player:getId()
     end
 
-    -- Events
-    for i = 1, #events do
-        player:registerEvent(events[i])
-    end
-
  	if player:getStorageValue(Storage.combatProtectionStorage) < 1 then
         player:setStorageValue(Storage.combatProtectionStorage, 1)
         onMovementRemoveProtection(playerId, player:getPosition(), 10)
 	end
 
 	-- Set Client XP Gain Rate
+	local baseExp = 100
 	if Game.getStorageValue(GlobalStorage.XpDisplayMode) > 0 then
-		displayRate = Game.getExperienceStage(player:getLevel())
-		else
-		displayRate = 1
+		baseExp = Game.getExperienceStage(player:getLevel())
 	end
 	local staminaMinutes = player:getStamina()
-	local storeBoost = player:getExpBoostStamina()
-	player:setStoreXpBoost(storeBoost > 0 and 50 or 0)
-	if staminaMinutes > 2400 and player:isPremium() and storeBoost > 0 then
-		player:setBaseXpGain(displayRate*2*100) -- Premium + Stamina boost + Store boost
-		player:setStaminaXpBoost(150)
-	elseif staminaMinutes > 2400 and player:isPremium() and storeBoost <= 0 then
-		player:setBaseXpGain(displayRate*1.5*100) -- Premium + Stamina boost
-		player:setStaminaXpBoost(150)
-	elseif staminaMinutes <= 2400 and staminaMinutes > 840 and player:isPremium() and storeBoost > 0 then
-		player:setBaseXpGain(displayRate*1.5*100) -- Premium + Store boost
-		player:setStaminaXpBoost(100)
-	elseif staminaMinutes > 840 and storeBoost > 0 then
-		player:setBaseXpGain(displayRate*1.5*100) -- FACC + Store boost
-		player:setStaminaXpBoost(100)
-	elseif staminaMinutes <= 840 and storeBoost > 0 then
-		player:setBaseXpGain(displayRate*1*100) -- ALL players low stamina + Store boost
-		player:setStaminaXpBoost(50)
-	elseif staminaMinutes <= 840 then
-		player:setBaseXpGain(displayRate*0.5*100) -- ALL players low stamina
-		player:setStaminaXpBoost(50)
+	local doubleExp = false -- pode mudar pra true se tiver double no server
+	local staminaBonus = (staminaMinutes > 2400) and 150 or ((staminaMinutes < 840) and 50 or 100)
+
+	if doubleExp then
+		baseExp = baseExp * 2
 	end
+
+	player:setStaminaXpBoost(staminaBonus)
+	player:setBaseXpGain(baseExp)
 
 	if player:getClient().version > 1110 then
 		local worldTime = getWorldTime()
 		local hours = math.floor(worldTime / 60)
 		local minutes = worldTime % 60
 		player:sendTibiaTime(hours, minutes)
+	end
+	
+	if player:getStorageValue(Storage.isTraining) == 1 then -- redefinir storage de exercise weapon
+		player:setStorageValue(Storage.isTraining,0)
 	end
     return true
 end

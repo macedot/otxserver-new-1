@@ -1,6 +1,8 @@
 /**
- * The OTXServer Project - based on TFS
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * @file gamestore.cpp
+ * 
+ * The Forgotten Server - a free and open-source MMORPG server emulator
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -275,7 +277,7 @@ bool GameStore::loadFromXml()
 	}
 }
 
-const int8_t GameStore::getCategoryIndexByName(std::string categoryName) const
+int8_t GameStore::getCategoryIndexByName(std::string categoryName)
 {
 	for (uint16_t i = 0; i < storeCategoryOffers.size(); i++) {
 		if (boost::iequals(storeCategoryOffers.at(i)->name, categoryName)) {
@@ -328,7 +330,7 @@ HistoryStoreOfferList IOGameStore::getHistoryEntries(uint32_t account_id, uint32
 
 	query << "SELECT `description`,`mode`,`coin_amount`,`time` FROM `store_history` WHERE `account_id` = " <<account_id << " ORDER BY `time` DESC LIMIT "
 		  << (std::max<int>((page-1),0)*GameStore::HISTORY_ENTRIES_PER_PAGE)
-		  << "," << (uint16_t)GameStore::HISTORY_ENTRIES_PER_PAGE <<";";
+		  << "," << GameStore::HISTORY_ENTRIES_PER_PAGE <<";";
 	DBResult_ptr result = Database::getInstance().storeQuery(query.str());
 
 	if (result) {

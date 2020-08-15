@@ -1,6 +1,8 @@
 /**
+ * @file monsters.h
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +19,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef FS_MONSTERS_H_776E8327BCE2450EB7C4A260785E6C0D
-#define FS_MONSTERS_H_776E8327BCE2450EB7C4A260785E6C0D
+#ifndef OT_SRC_MONSTERS_H_
+#define OT_SRC_MONSTERS_H_
 
 #include "creature.h"
 
 
 const uint32_t MAX_LOOTCHANCE = 100000;
-const uint32_t MAX_STATICWALK = 100;
 
 struct LootBlock {
 	uint16_t id;
@@ -176,10 +177,11 @@ class MonsterType
 		bool isPet = false;
 		bool isPassive = false;
 		bool isRewardBoss = false;
-		bool isPreyable = true;
 		bool canWalkOnEnergy = true;
 		bool canWalkOnFire = true;
 		bool canWalkOnPoison = true;
+
+		MonstersEvent_t eventType = MONSTERS_EVENT_NONE;
 	};
 
 	public:
@@ -259,10 +261,9 @@ class Monsters
 		MonsterType* getMonsterType(const std::string& name);
 		void addMonsterType(const std::string& name, MonsterType* mType);
 		bool deserializeSpell(MonsterSpell* spell, spellBlock_t& sb, const std::string& description = "");
-
-		std::vector<std::string> getPreyMonsters();
 		
 		std::unique_ptr<LuaScriptInterface> scriptInterface;
+		bool loadCallback(LuaScriptInterface* scriptInterface, MonsterType* mType);
 
 	private:
 		ConditionDamage* getDamageCondition(ConditionType_t conditionType,

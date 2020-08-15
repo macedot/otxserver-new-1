@@ -1,6 +1,8 @@
 /**
+ * @file connection.cpp
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -102,9 +104,9 @@ Connection::~Connection()
 	closeSocket();
 }
 
-void Connection::accept(Protocol_ptr protocol)
+void Connection::accept(Protocol_ptr conProtocol)
 {
-	this->protocol = protocol;
+	this->protocol = conProtocol;
 	g_dispatcher.addTask(createTask(std::bind(&Protocol::onConnect, protocol)));
 	connectionState = CONNECTION_STATE_CONNECTING_STAGE2;
 
@@ -205,8 +207,8 @@ void Connection::parseHeader(const boost::system::error_code& error)
 	if (timePassed > 2) {
 		timeConnected = time(nullptr);
 		packetsSent = 0;
-    checksumsMap.clear();
-  }
+		checksumsMap.clear();
+	}
 
 	uint16_t size = msg.getLengthHeader();
 	if (size == 0 || size >= NETWORKMESSAGE_MAXSIZE - 16) {
@@ -269,14 +271,13 @@ void Connection::parsePacket(const boost::system::error_code& error)
 
 		protocol->onRecvFirstMessage(msg);
 	} else {
-    if (detectAttack(recvPacket)) {
-      std::cout << "[Network protection] - attack detected. IP: [" << convertIPToString(getIP()) << "] - disconnected" << std::endl;
-      close(FORCE_CLOSE);
-    }
-    else {
-      protocol->onRecvMessage(msg); // Send the packet to the current protocol
-    }
-  }
+		if(detectAttack(recvPacket)) {
+			std::cout << "[Network protection] - attack detected. IP: ["<< convertIPToString(getIP())<< "] - disconnected" << std::endl;
+			close(FORCE_CLOSE);
+		} else {
+			protocol->onRecvMessage(msg); // Send the packet to the current protocol
+		}
+	}
 
 	try {
 		readTimer.expires_from_now(boost::posix_time::seconds(CONNECTION_READ_TIMEOUT));
@@ -293,22 +294,21 @@ void Connection::parsePacket(const boost::system::error_code& error)
 	}
 }
 
-bool Connection::detectAttack(const uint32_t currentPacketChecksum) {
-  const auto it = checksumsMap.find(currentPacketChecksum);
-  if (it == checksumsMap.end()) { //element doesn't exists
-    checksumsMap.insert(std::make_pair(currentPacketChecksum, 1));
-  }
-  else {
-    it->second += 1; //increase ocurrencies
-    if (it->second > (uint32_t)g_config.getNumber(ConfigManager::NETWORK_ATTACK_THRESHOLD)) {
-      return true;
-    }
-  }
+bool Connection::detectAttack(const uint32_t currentPacketChecksum) { // jlcvp(Leu) - detect packet replication attack
+	const auto it = checksumsMap.find(currentPacketChecksum);
+	if(it == checksumsMap.end()){ //element doesn't exists
+		checksumsMap.insert(std::make_pair(currentPacketChecksum, 1));
+	} else {
+        it->second += 1; //increase ocurrencies
+	    if(it->second > (uint32_t)g_config.getNumber(ConfigManager::NETWORK_ATTACK_THRESHOLD)) {
+            return true;
+        }
+	}
 
-  return false;
+	return false;
 }
 
-void Connection::send(const OutputMessage_ptr& msg)
+void Connection::send(const OutputMessage_ptr& conMsg)
 {
 	std::lock_guard<std::recursive_mutex> lockClass(connectionLock);
 	if (connectionState == CONNECTION_STATE_DISCONNECTED) {
@@ -316,22 +316,22 @@ void Connection::send(const OutputMessage_ptr& msg)
 	}
 
 	bool noPendingWrite = messageQueue.empty();
-	messageQueue.emplace_back(msg);
+	messageQueue.emplace_back(conMsg);
 	if (noPendingWrite) {
-		internalSend(msg);
+		internalSend(conMsg);
 	}
 }
 
-void Connection::internalSend(const OutputMessage_ptr& msg)
+void Connection::internalSend(const OutputMessage_ptr& conMsg)
 {
-	protocol->onSendMessage(msg);
+	protocol->onSendMessage(conMsg);
 	try {
 		writeTimer.expires_from_now(boost::posix_time::seconds(CONNECTION_WRITE_TIMEOUT));
 		writeTimer.async_wait(std::bind(&Connection::handleTimeout, std::weak_ptr<Connection>(shared_from_this()),
 			std::placeholders::_1));
 
 		boost::asio::async_write(socket,
-			boost::asio::buffer(msg->getOutputBuffer(), msg->getLength()),
+			boost::asio::buffer(conMsg->getOutputBuffer(), conMsg->getLength()),
 			std::bind(&Connection::onWriteOperation, shared_from_this(), std::placeholders::_1));
 	} catch (boost::system::system_error& e) {
 		std::cout << "[Network error - Connection::internalSend] " << e.what() << std::endl;

@@ -1,6 +1,8 @@
 /**
+ * @file spells.cpp
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -301,11 +303,11 @@ Position Spells::getCasterPosition(Creature* creature, Direction dir)
 	return getNextPosition(dir, creature->getPosition());
 }
 
-CombatSpell::CombatSpell(Combat* combat, bool needTarget, bool needDirection) :
+CombatSpell::CombatSpell(Combat* initCombat, bool initNeedTarget, bool initNeedDirection) :
 	Event(&g_spells->getScriptInterface()),
-	combat(combat),
-	needDirection(needDirection),
-	needTarget(needTarget)
+	combat(initCombat),
+	needDirection(initNeedDirection),
+	needTarget(initNeedTarget)
 {}
 
 CombatSpell::~CombatSpell()
@@ -1208,16 +1210,16 @@ ReturnValue RuneSpell::canExecuteAction(const Player* player, const Position& to
 }
 
 bool RuneSpell::canUseRune(const Player* player, bool ignoreLevel /* =false*/) {
-  if (player->hasFlag(PlayerFlag_CannotUseSpells)) {
-    return false;
-  }
-  if (player->hasFlag(PlayerFlag_IgnoreSpellCheck)) {
-    return true;
-  }
+    if (player->hasFlag(PlayerFlag_CannotUseSpells)) {
+        return false;
+    }
+    if (player->hasFlag(PlayerFlag_IgnoreSpellCheck)) {
+        return true;
+    }
 
-  return (player->getLevel() >= getLevel() || ignoreLevel) &&
-    player->getBaseMagicLevel() >= getMagicLevel() &&
-    (vocSpellMap.empty() || vocSpellMap.find(player->getVocationId()) != vocSpellMap.end());
+    return (player->getLevel() >= getLevel() || ignoreLevel) &&
+           player->getBaseMagicLevel() >= getMagicLevel() &&
+           (vocSpellMap.empty() || vocSpellMap.find(player->getVocationId()) != vocSpellMap.end());
 }
 
 bool RuneSpell::executeUse(Player* player, Item* item, const Position&, Thing* target, const Position& toPosition, bool isHotkey)
@@ -1259,6 +1261,7 @@ bool RuneSpell::executeUse(Player* player, Item* item, const Position&, Thing* t
 	if (hasCharges && item && g_config.getBoolean(ConfigManager::REMOVE_RUNE_CHARGES)) {
 		int32_t newCount = std::max<int32_t>(0, item->getItemCount() - 1);
 		g_game.transformItem(item, item->getID(), newCount);
+		player->updateSupplyTracker(item);
 	}
 	return true;
 }

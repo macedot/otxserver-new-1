@@ -241,6 +241,34 @@ do
 	rawgetmetatable("Spell").__newindex = SpellNewIndex
 end
 
+do
+	local function MonsterTypeNewIndex(self, key, value)
+		if key == "onThink" then
+			self:eventType(MONSTERS_EVENT_THINK)
+			self:onThink(value)
+			return
+		elseif key == "onAppear" then
+			self:eventType(MONSTERS_EVENT_APPEAR)
+			self:onAppear(value)
+			return
+		elseif key == "onDisappear" then
+			self:eventType(MONSTERS_EVENT_DISAPPEAR)
+			self:onDisappear(value)
+			return
+		elseif key == "onMove" then
+			self:eventType(MONSTERS_EVENT_MOVE)
+			self:onMove(value)
+			return
+		elseif key == "onSay" then
+			self:eventType(MONSTERS_EVENT_SAY)
+			self:onSay(value)
+			return
+		end
+		rawset(self, key, value)
+	end
+	rawgetmetatable("MonsterType").__newindex = MonsterTypeNewIndex
+end
+
 function pushThing(thing)
 	local t = {uid = 0, itemid = 0, type = 0, actionid = 0}
 	if thing ~= nil then
@@ -474,6 +502,8 @@ function getPlayerLearnedInstantSpell(cid, name) local p = Player(cid) return p 
 function isPlayerGhost(cid) local p = Player(cid) return p ~= nil and p:isInGhostMode() or false end
 function isPlayerPzLocked(cid) local p = Player(cid) return p ~= nil and p:isPzLocked() or false end
 function isPremium(cid) local p = Player(cid) return p ~= nil and p:isPremium() or false end
+function getBlessingsCost(level) return Blessings.getBlessingsCost(level) end
+function getPvpBlessingCost(level) return Blessings.getPvpBlessingCost(level) end
 function getPlayersByIPAddress(ip, mask)
 	if mask == nil then mask = 0xFFFFFFFF end
 	local masked = bit.band(ip, mask)
@@ -536,7 +566,7 @@ getIpByName = getIPByPlayerName
 function setPlayerStorageValue(cid, key, value) local p = Player(cid) return p ~= nil and p:setStorageValue(key, value) or false end
 function doPlayerSetBalance(cid, balance) local p = Player(cid) return p ~= nil and p:setBankBalance(balance) or false end
 function doPlayerAddMoney(cid, money) local p = Player(cid) return p ~= nil and p:addMoney(money) or false end
-function doPlayerRemoveMoney(cid, money) local p = Player(cid) return p ~= nil and p:removeMoney(money) or false end
+function doPlayerRemoveMoney(cid, money) local p = Player(cid) return p ~= nil and p:removeMoneyNpc(money) or false end
 function doPlayerAddSoul(cid, soul) local p = Player(cid) return p ~= nil and p:addSoul(soul) or false end
 function doPlayerSetVocation(cid, vocation) local p = Player(cid) return p ~= nil and p:setVocation(Vocation(vocation)) or false end
 function doPlayerSetTown(cid, town) local p = Player(cid) return p ~= nil and p:setTown(Town(town)) or false end
@@ -1203,9 +1233,7 @@ function doSetCreatureOutfit(cid, outfit, time)
 	end
 
 	local condition = Condition(CONDITION_OUTFIT)
-	condition:setOutfit({
-		lookTypeEx = itemType:getId()
-	})
+	condition:setOutfit(outfit)
 	condition:setTicks(time)
 	creature:addCondition(condition)
 
@@ -1271,6 +1299,10 @@ function createFunctions(class)
 	end
 end
 
+function doPlayerTakeItem(cid, itemid, count)
+	return Player(cid):removeItem(itemid, count)
+end
+
 -- CASAMENTO MARRY
 
 function getPlayerNameById(id)
@@ -1281,4 +1313,32 @@ result.free(resultName)
 return name
 end
 return 0
+end
+
+-- Prey slots consumption
+function preyTimeLeft(player, slot)
+	local timeLeft = player:getPreyTimeLeft(slot) / 60
+	local monster = player:getPreyCurrentMonster(slot)
+	if (timeLeft > 0) then
+		local playerId = player:getId()
+		local currentTime = os.time()
+		local timePassed = currentTime - nextPreyTime[playerId][slot]
+		if timePassed >= 59 then
+			timeLeft = timeLeft - 1
+			nextPreyTime[playerId][slot] = currentTime + 60
+		else
+			timeLeft = timeLeft - 0
+		end
+		if (timeLeft < 1) then		
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("Your %s's prey has expired.", monster:lower()))
+			player:setPreyCurrentMonster(slot, "")
+		end
+		-- Setting new timeLeft
+		player:setPreyTimeLeft(slot, timeLeft * 60)
+	else
+		-- Expiring prey as there's no timeLeft
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("Your %s's prey has expired.", monster:lower()))
+		player:setPreyCurrentMonster(slot, "")
+	end
+	return player:sendPreyData(slot)
 end

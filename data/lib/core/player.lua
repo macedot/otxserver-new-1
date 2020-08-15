@@ -39,18 +39,6 @@ function Player.checkGnomeRank(self)
 	return true
 end
 
-function Player.setExhaustion(self, value, time)
-    return self:setStorageValue(value, time + os.time())
-end
-
-function Player.getExhaustion(self, value)
-    local storage = self:getStorageValue(value)
-    if storage <= 0 then
-        return 0
-    end
-    return storage - os.time()
-end
-
 function Player.addFamePoint(self)
     local points = self:getStorageValue(SPIKE_FAME_POINTS)
     local current = math.max(0, points)
@@ -137,19 +125,6 @@ function Player.getDepotItems(self, depotId)
 	return self:getDepotChest(depotId, true):getItemHoldingCount()
 end
 
-function Player.getLossPercent(self)
-	local lossPercent = {
-		[0] = 100,
-		[1] = 70,
-		[2] = 45,
-		[3] = 25,
-		[4] = 10,
-		[5] = 0
-	}
-
-	return lossPercent[self:getBlessings()]
-end
-
 function Player.hasAllowMovement(self)
 	return self:getStorageValue(STORAGE.blockMovementStorage) ~= 1
 end
@@ -183,16 +158,24 @@ function Player.isSorcerer(self)
 	return isInArray({1, 5}, self:getVocation():getId())
 end
 
+function Player.hasFlag(self, flag)
+    if not flag or type(flag) ~= 'number' then
+        return false
+    end
+
+    return bit.band(self:getGroup():getFlags(), flag) ~= 0
+end
+
 function Player.isPremium(self)
 	return self:getPremiumDays() > 0 or configManager.getBoolean(configKeys.FREE_PREMIUM)
 end
 
 function Player.isPromoted(self)
-	local vocation = self:getVocation()
-	local promotedVocation = vocation:getPromotion()
-	promotedVocation = promotedVocation and promotedVocation:getId() or 0
+    local vocation = self:getVocation()
+    local promotedVocation = vocation:getPromotion()
+    promotedVocation = promotedVocation and promotedVocation:getId() or 0
 
-	return promotedVocation == 0 and vocation:getId() ~= promotedVocation
+    return promotedVocation == 0 and vocation:getId() ~= promotedVocation
 end
 
 function Player.isUsingOtClient(self)
@@ -284,19 +267,19 @@ function Player.sendDamageImpact(self, damage)
 	msg:sendToPlayer(self)
 end
 
- -- Loot Analyser
-    function Player.sendLootStats(self, item)
-    	local msg = NetworkMessage()
-    	msg:addByte(0xCF) -- loot analyser bit
-    	msg:addItem(item, self) -- item userdata
-    	msg:addString(getItemName(item:getId()))
-    	msg:sendToPlayer(self)
-    end
+-- Loot Analyser
+function Player.sendLootStats(self, item)
+    local msg = NetworkMessage()
+    msg:addByte(0xCF) -- loot analyser bit
+    msg:addItem(item, self) -- item userdata
+    msg:addString(getItemName(item:getId()))
+    msg:sendToPlayer(self)
+end
 
-    -- Supply Analyser
-    function Player.sendWaste(self, item)
-        local msg = NetworkMessage()
-        msg:addByte(0xCE) -- waste bit
-        msg:addItemId(item) -- itemId
-        msg:sendToPlayer(self)
-    end
+-- Supply Analyser
+function Player.sendWaste(self, item)
+    local msg = NetworkMessage()
+    msg:addByte(0xCE) -- waste bit
+    msg:addItemId(item) -- itemId
+    msg:sendToPlayer(self)
+end

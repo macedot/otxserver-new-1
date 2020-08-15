@@ -1,6 +1,8 @@
 /**
+ * @file const.h
+ * 
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2019 Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2020 Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +19,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef FS_CONST_H_0A49B5996F074465BF44B90F4F780E8B
-#define FS_CONST_H_0A49B5996F074465BF44B90F4F780E8B
+#ifndef OT_SRC_CONST_H_
+#define OT_SRC_CONST_H_
 
-static constexpr int32_t NETWORKMESSAGE_MAXSIZE = 24590;
+static constexpr int32_t NETWORKMESSAGE_MAXSIZE = 65535;
 
 enum MagicEffectClasses : uint8_t {
 	CONST_ME_NONE,
@@ -394,7 +396,39 @@ enum Icons_t {
 	ICON_REDSWORDS = 1 << 13,
 	ICON_PIGEON = 1 << 14,
 	ICON_BLEEDING = 1 << 15,
-  ICON_WITHIN_RESTING_AREA = 1 << 16 //client 11.40+
+	ICON_WITHIN_RESTING_AREA = 1 << 16 //client 11.40+
+};
+
+enum QuickLootCategory_t : uint8_t {
+	LOOT_NONE = 0,
+	LOOT_ARMOR = 1,
+	LOOT_AMULET = 2,
+	LOOT_BOOTS = 3,
+	LOOT_CONTAINER = 4,
+	LOOT_DECORATION = 5,
+	LOOT_FOOD = 6,
+	LOOT_HELMET = 7,
+	LOOT_LEGS = 8,
+	LOOT_OTHER = 9,
+	LOOT_POTION = 10,
+	LOOT_RING = 11,
+	LOOT_RUNE = 12,
+	LOOT_SHIELD = 13,
+	LOOT_TOOL = 14,
+	LOOT_VALUABLE = 15,
+	LOOT_WEAPON_AMMO = 16,
+	LOOT_WEAPON_AXE = 17,
+	LOOT_WEAPON_CLUB = 18,
+	LOOT_WEAPON_DISTANCE = 19,
+	LOOT_WEAPON_SWORD = 20,
+	LOOT_WEAPON_WAND = 21,
+	LOOT_CREATURE_PRODUCT = 24,
+	LOOT_STASH_RETRIEVE = 27,
+	LOOT_GOLD = 30,
+	LOOT_UNASSIGNED = 31,
+
+	LOOT_START = LOOT_ARMOR,
+	LOOT_END = LOOT_UNASSIGNED
 
 };
 
@@ -472,10 +506,11 @@ enum GuildEmblems_t : uint8_t {
 enum item_t : uint16_t {
 	ITEM_BROWSEFIELD = 460, // for internal use
 
-	ITEM_DEPOT_NULL = 25452, // for internal use
 	ITEM_GOLD_POUCH = 26377,
 	TRANSFORM_BOX_ID = 26054, // for internal use
+	ITEM_SUPPLY_STASH = 32450,
 
+	ITEM_DEPOT_NULL = 25452, // for internal use
 	ITEM_DEPOT_I = 25453,
 	ITEM_DEPOT_II = 25454,
 	ITEM_DEPOT_III = 25455,
@@ -493,7 +528,7 @@ enum item_t : uint16_t {
 	ITEM_DEPOT_XV = 25467,
 	ITEM_DEPOT_XVI = 25468,
 	ITEM_DEPOT_XVII = 25469,
-	ITEM_DEPOT_XVIII = 36632,
+	ITEM_DEPOT_XVIII = 36750,
 
 	ITEM_FIREFIELD_PVP_FULL = 1487,
 	ITEM_FIREFIELD_PVP_MEDIUM = 1488,
@@ -520,10 +555,12 @@ enum item_t : uint16_t {
 	ITEM_WILDGROWTH_SAFE = 11099,
 
 	ITEM_BAG = 1987,
+	ITEM_SHOPPING_BAG = 23782,
 
 	ITEM_GOLD_COIN = 2148,
 	ITEM_PLATINUM_COIN = 2152,
 	ITEM_CRYSTAL_COIN = 2160,
+	ITEM_STORE_COIN = 24774,
 
 	ITEM_REWARD_CONTAINER = 21518,
 	ITEM_REWARD_CHEST = 21584,
@@ -546,8 +583,6 @@ enum item_t : uint16_t {
 	ITEM_LABEL = 2599,
 
 	ITEM_AMULETOFLOSS = 2173,
-
-	ITEM_TIBIA_COIN = 24774,
 
 	ITEM_EXERCISE_START = 32384,
 	ITEM_EXERCISE_END = 32389,
@@ -625,7 +660,6 @@ enum ReloadTypes_t : uint8_t  {
 	RELOAD_TYPE_MOUNTS,
 	RELOAD_TYPE_MOVEMENTS,
 	RELOAD_TYPE_NPCS,
-	RELOAD_TYPE_QUESTS,
 	RELOAD_TYPE_RAIDS,
 	RELOAD_TYPE_SCRIPTS,
 	RELOAD_TYPE_SPELLS,
@@ -644,9 +678,9 @@ enum NameEval_t : uint8_t {
 };
 
 enum DailyRewardStorages_t : uint32_t {
-  DAILYREWARDSTORAGE_NEXTREWARDPICK = 69799,
-  DAILYREWARDSTORAGE_LASTREWARDPICK = 69800,
-  DAILYREWARDSTORAGE_STREAKDAYS = 69801
+	DAILYREWARDSTORAGE_NEXTREWARDPICK = 69799,
+	DAILYREWARDSTORAGE_LASTREWARDPICK = 69800,
+	DAILYREWARDSTORAGE_STREAKDAYS = 69801
 };
 
 static constexpr int32_t CHANNEL_GUILD = 0x00;
@@ -668,5 +702,7 @@ static constexpr int32_t PSTRG_MOUNTS_RANGE_SIZE = 10;
 static constexpr int32_t PSTRG_MOUNTS_CURRENTMOUNT = (PSTRG_MOUNTS_RANGE_START + 10);
 
 #define IS_IN_KEYRANGE(key, range) (key >= PSTRG_##range##_START && ((key - PSTRG_##range##_START) <= PSTRG_##range##_SIZE))
+
+#define PREY_SLOTCOUNT 3
 
 #endif
